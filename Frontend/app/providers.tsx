@@ -1,6 +1,6 @@
 'use client'
 
-import { QueryClient, QueryClientProvider } from 'react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useState } from 'react'
 
@@ -10,6 +10,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       queries: {
         retry: 1,
         refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+      mutations: {
+        retry: 1,
       },
     },
   }))
@@ -24,6 +28,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           style: {
             background: '#363636',
             color: '#fff',
+            fontSize: '14px',
+            maxWidth: '400px',
           },
           success: {
             duration: 3000,

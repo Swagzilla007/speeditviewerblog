@@ -2,21 +2,21 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { 
   User, 
   Post, 
-  PostDetail, 
   Category, 
   Tag, 
   File, 
   DownloadRequest,
-  PostsQueryParams,
-  FilesQueryParams,
-  DownloadRequestsQueryParams,
+  ApiResponse, 
+  PaginatedResponse,
+  PostQueryParams,
+  FileQueryParams,
+  DownloadRequestQueryParams,
   LoginForm,
   PostForm,
   CategoryForm,
   TagForm,
-  DownloadRequestForm,
-  ApiResponse,
-  PaginatedResponse
+  FileForm,
+  DownloadRequestForm
 } from '@/types';
 
 class ApiClient {
@@ -25,6 +25,7 @@ class ApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+      timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -33,7 +34,7 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -44,14 +45,16 @@ class ApiClient {
       }
     );
 
-    // Response interceptor to handle errors
+    // Response interceptor to handle auth errors
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('token');
+          localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          window.location.href = '/login';
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(error);
       }
@@ -59,141 +62,140 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async login(credentials: LoginForm): Promise<{ user: User; token: string }> {
-    const response: AxiosResponse<{ user: User; token: string; message: string }> = 
-      await this.client.post('/auth/login', credentials);
+  async login(credentials: LoginForm): Promise<ApiResponse<{ user: User; token: string }>> {
+    const response = await this.client.post('/auth/login', credentials);
     return response.data;
   }
 
-  async getProfile(): Promise<User> {
-    const response: AxiosResponse<{ user: User }> = await this.client.get('/auth/profile');
-    return response.data.user;
+  async getProfile(): Promise<ApiResponse<User>> {
+    const response = await this.client.get('/auth/profile');
+    return response.data;
   }
 
-  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<void> {
-    await this.client.put('/auth/change-password', data);
+  async changePassword(data: { current_password: string; new_password: string }): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.post('/auth/change-password', data);
+    return response.data;
   }
 
   // Posts endpoints
-  async getPosts(params?: PostsQueryParams): Promise<PaginatedResponse<Post>> {
-    const response: AxiosResponse<{ posts: Post[]; pagination: any }> = 
-      await this.client.get('/posts', { params });
-    return {
-      data: response.data.posts,
-      pagination: response.data.pagination,
-    };
-  }
-
-  async getPost(slug: string): Promise<{ post: PostDetail; relatedPosts: Post[] }> {
-    const response: AxiosResponse<{ post: PostDetail; relatedPosts: Post[] }> = 
-      await this.client.get(`/posts/${slug}`);
+  async getPosts(params?: PostQueryParams): Promise<ApiResponse<PaginatedResponse<Post>>> {
+    const response = await this.client.get('/posts', { params });
     return response.data;
   }
 
-  async createPost(data: PostForm): Promise<Post> {
-    const response: AxiosResponse<{ post: Post; message: string }> = 
-      await this.client.post('/posts', data);
-    return response.data.post;
+  async getPost(slug: string): Promise<ApiResponse<Post>> {
+    const response = await this.client.get(`/posts/${slug}`);
+    return response.data;
   }
 
-  async updatePost(id: number, data: Partial<PostForm>): Promise<Post> {
-    const response: AxiosResponse<{ post: Post; message: string }> = 
-      await this.client.put(`/posts/${id}`, data);
-    return response.data.post;
+  async createPost(data: PostForm): Promise<ApiResponse<Post>> {
+    const response = await this.client.post('/posts', data);
+    return response.data;
   }
 
-  async deletePost(id: number): Promise<void> {
-    await this.client.delete(`/posts/${id}`);
+  async updatePost(id: number, data: Partial<PostForm>): Promise<ApiResponse<Post>> {
+    const response = await this.client.put(`/posts/${id}`, data);
+    return response.data;
+  }
+
+  async deletePost(id: number): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.delete(`/posts/${id}`);
+    return response.data;
+  }
+
+  async getRelatedPosts(postId: number, limit: number = 3): Promise<ApiResponse<Post[]>> {
+    const response = await this.client.get(`/posts/${postId}/related`, { params: { limit } });
+    return response.data;
   }
 
   // Categories endpoints
-  async getCategories(): Promise<Category[]> {
-    const response: AxiosResponse<{ categories: Category[] }> = 
-      await this.client.get('/categories');
-    return response.data.categories;
+  async getCategories(): Promise<ApiResponse<Category[]>> {
+    const response = await this.client.get('/categories');
+    return response.data;
   }
 
-  async getCategory(slug: string): Promise<Category> {
-    const response: AxiosResponse<{ category: Category }> = 
-      await this.client.get(`/categories/${slug}`);
-    return response.data.category;
+  async getCategory(slug: string): Promise<ApiResponse<Category>> {
+    const response = await this.client.get(`/categories/${slug}`);
+    return response.data;
   }
 
-  async createCategory(data: CategoryForm): Promise<Category> {
-    const response: AxiosResponse<{ category: Category; message: string }> = 
-      await this.client.post('/categories', data);
-    return response.data.category;
+  async createCategory(data: CategoryForm): Promise<ApiResponse<Category>> {
+    const response = await this.client.post('/categories', data);
+    return response.data;
   }
 
-  async updateCategory(id: number, data: CategoryForm): Promise<Category> {
-    const response: AxiosResponse<{ category: Category; message: string }> = 
-      await this.client.put(`/categories/${id}`, data);
-    return response.data.category;
+  async updateCategory(id: number, data: Partial<CategoryForm>): Promise<ApiResponse<Category>> {
+    const response = await this.client.put(`/categories/${id}`, data);
+    return response.data;
   }
 
-  async deleteCategory(id: number): Promise<void> {
-    await this.client.delete(`/categories/${id}`);
+  async deleteCategory(id: number): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.delete(`/categories/${id}`);
+    return response.data;
   }
 
   // Tags endpoints
-  async getTags(): Promise<Tag[]> {
-    const response: AxiosResponse<{ tags: Tag[] }> = 
-      await this.client.get('/tags');
-    return response.data.tags;
+  async getTags(): Promise<ApiResponse<Tag[]>> {
+    const response = await this.client.get('/tags');
+    return response.data;
   }
 
-  async getTag(slug: string): Promise<Tag> {
-    const response: AxiosResponse<{ tag: Tag }> = 
-      await this.client.get(`/tags/${slug}`);
-    return response.data.tag;
+  async getTag(slug: string): Promise<ApiResponse<Tag>> {
+    const response = await this.client.get(`/tags/${slug}`);
+    return response.data;
   }
 
-  async createTag(data: TagForm): Promise<Tag> {
-    const response: AxiosResponse<{ tag: Tag; message: string }> = 
-      await this.client.post('/tags', data);
-    return response.data.tag;
+  async createTag(data: TagForm): Promise<ApiResponse<Tag>> {
+    const response = await this.client.post('/tags', data);
+    return response.data;
   }
 
-  async updateTag(id: number, data: TagForm): Promise<Tag> {
-    const response: AxiosResponse<{ tag: Tag; message: string }> = 
-      await this.client.put(`/tags/${id}`, data);
-    return response.data.tag;
+  async updateTag(id: number, data: Partial<TagForm>): Promise<ApiResponse<Tag>> {
+    const response = await this.client.put(`/tags/${id}`, data);
+    return response.data;
   }
 
-  async deleteTag(id: number): Promise<void> {
-    await this.client.delete(`/tags/${id}`);
+  async deleteTag(id: number): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.delete(`/tags/${id}`);
+    return response.data;
   }
 
   // Files endpoints
-  async uploadFile(file: File, postId?: number): Promise<File> {
+  async getFiles(params?: FileQueryParams): Promise<ApiResponse<PaginatedResponse<File>>> {
+    const response = await this.client.get('/files', { params });
+    return response.data;
+  }
+
+  async getFile(id: number): Promise<ApiResponse<File>> {
+    const response = await this.client.get(`/files/${id}`);
+    return response.data;
+  }
+
+  async uploadFile(file: File, data?: Partial<FileForm>): Promise<ApiResponse<File>> {
     const formData = new FormData();
     formData.append('file', file);
-    if (postId) {
-      formData.append('postId', postId.toString());
-    }
-
-    const response: AxiosResponse<{ file: File; message: string }> = 
-      await this.client.post('/files/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    if (data) {
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key as keyof FileForm] as string);
       });
-    return response.data.file;
+    }
+    
+    const response = await this.client.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   }
 
-  async getFiles(params?: FilesQueryParams): Promise<PaginatedResponse<File>> {
-    const response: AxiosResponse<{ files: File[]; pagination: any }> = 
-      await this.client.get('/files', { params });
-    return {
-      data: response.data.files,
-      pagination: response.data.pagination,
-    };
+  async updateFile(id: number, data: Partial<FileForm>): Promise<ApiResponse<File>> {
+    const response = await this.client.put(`/files/${id}`, data);
+    return response.data;
   }
 
-  async getFile(id: number): Promise<File> {
-    const response: AxiosResponse<{ file: File }> = 
-      await this.client.get(`/files/${id}`);
-    return response.data.file;
+  async deleteFile(id: number): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.delete(`/files/${id}`);
+    return response.data;
   }
 
   async downloadFile(id: number): Promise<Blob> {
@@ -203,56 +205,74 @@ class ApiClient {
     return response.data;
   }
 
-  async updateFile(id: number, data: { postId?: number }): Promise<File> {
-    const response: AxiosResponse<{ file: File; message: string }> = 
-      await this.client.put(`/files/${id}`, data);
-    return response.data.file;
+  // Download requests endpoints
+  async getDownloadRequests(params?: DownloadRequestQueryParams): Promise<ApiResponse<PaginatedResponse<DownloadRequest>>> {
+    const response = await this.client.get('/download-requests', { params });
+    return response.data;
   }
 
-  async deleteFile(id: number): Promise<void> {
-    await this.client.delete(`/files/${id}`);
+  async getDownloadRequest(id: number): Promise<ApiResponse<DownloadRequest>> {
+    const response = await this.client.get(`/download-requests/${id}`);
+    return response.data;
   }
 
-  // Download Requests endpoints
-  async createDownloadRequest(data: DownloadRequestForm): Promise<DownloadRequest> {
-    const response: AxiosResponse<{ request: DownloadRequest; message: string }> = 
-      await this.client.post('/download-requests', data);
-    return response.data.request;
+  async createDownloadRequest(data: DownloadRequestForm & { file_id: number }): Promise<ApiResponse<DownloadRequest>> {
+    const response = await this.client.post('/download-requests', data);
+    return response.data;
   }
 
-  async getMyRequests(params?: DownloadRequestsQueryParams): Promise<PaginatedResponse<DownloadRequest>> {
-    const response: AxiosResponse<{ requests: DownloadRequest[]; pagination: any }> = 
-      await this.client.get('/download-requests/my-requests', { params });
-    return {
-      data: response.data.requests,
-      pagination: response.data.pagination,
-    };
+  async updateDownloadRequest(id: number, data: { status: 'approved' | 'denied'; admin_notes?: string }): Promise<ApiResponse<DownloadRequest>> {
+    const response = await this.client.put(`/download-requests/${id}`, data);
+    return response.data;
   }
 
-  async getAllRequests(params?: DownloadRequestsQueryParams): Promise<PaginatedResponse<DownloadRequest>> {
-    const response: AxiosResponse<{ requests: DownloadRequest[]; pagination: any }> = 
-      await this.client.get('/download-requests', { params });
-    return {
-      data: response.data.requests,
-      pagination: response.data.pagination,
-    };
+  async deleteDownloadRequest(id: number): Promise<ApiResponse<{ message: string }>> {
+    const response = await this.client.delete(`/download-requests/${id}`);
+    return response.data;
   }
 
-  async getRequest(id: number): Promise<DownloadRequest> {
-    const response: AxiosResponse<{ request: DownloadRequest }> = 
-      await this.client.get(`/download-requests/${id}`);
-    return response.data.request;
+  // Dashboard endpoints
+  async getDashboardStats(): Promise<ApiResponse<{
+    totalPosts: number;
+    publishedPosts: number;
+    draftPosts: number;
+    totalCategories: number;
+    totalTags: number;
+    totalFiles: number;
+    pendingRequests: number;
+    totalUsers: number;
+  }>> {
+    const response = await this.client.get('/dashboard/stats');
+    return response.data;
   }
 
-  async updateRequest(id: number, data: { status: 'pending' | 'approved' | 'rejected'; notes?: string }): Promise<DownloadRequest> {
-    const response: AxiosResponse<{ request: DownloadRequest; message: string }> = 
-      await this.client.put(`/download-requests/${id}`, data);
-    return response.data.request;
+  // Search endpoints
+  async searchPosts(query: string, params?: Omit<PostQueryParams, 'search'>): Promise<ApiResponse<PaginatedResponse<Post>>> {
+    const response = await this.client.get('/search/posts', { 
+      params: { ...params, q: query } 
+    });
+    return response.data;
   }
 
-  async deleteRequest(id: number): Promise<void> {
-    await this.client.delete(`/download-requests/${id}`);
+  // Utility methods
+  setAuthToken(token: string) {
+    localStorage.setItem('auth_token', token);
+  }
+
+  getAuthToken(): string | null {
+    return localStorage.getItem('auth_token');
+  }
+
+  removeAuthToken() {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getAuthToken();
   }
 }
 
-export const api = new ApiClient(); 
+// Create and export a singleton instance
+const apiClient = new ApiClient();
+export default apiClient; 
