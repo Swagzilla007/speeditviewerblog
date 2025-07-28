@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
         apiClient.setAuthToken(response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
         toast.success('Login successful!')
-        router.push('/admin/dashboard')
+        router.push('/admin')
       } else {
         toast.error(response.message || 'Login failed')
       }

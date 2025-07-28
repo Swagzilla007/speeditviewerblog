@@ -7,11 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "dev:admin": "next dev -p 3001",
-    "dev:user": "next dev -p 3000",
-    "build:admin": "cross-env NEXT_PUBLIC_APP_TYPE=admin next build",
-    "build:user": "cross-env NEXT_PUBLIC_APP_TYPE=user next build"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^14.0.0",
