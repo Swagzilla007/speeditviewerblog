@@ -1,0 +1,396 @@
+const express = require('express');
+const { pool } = require('../config/database');
+const { authenticateToken, requireAdmin, optionalAuth } = require('../middleware/auth');
+const { createPostValidation, updatePostValidation, paginationValidation } = require('../middleware/validation');
+
+const router = express.Router();
+
+// Helper function to create slug
+const createSlug = (title) => {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9 -]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim('-');
+};
+
+// Get all posts (public - with optional auth for additional features)
+router.get('/', optionalAuth, paginationValidation, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, category, tag, status = 'published' } = req.query;
+    const offset = (page - 1) * limit;
+
+    let whereConditions = ['p.status = ?'];
+    let params = [status];
+
+    // Add search condition
+    if (search) {
+      whereConditions.push('(p.title LIKE ? OR p.excerpt LIKE ? OR p.content LIKE ?)');
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    // Add category filter
+    if (category) {
+      whereConditions.push('c.slug = ?');
+      params.push(category);
+    }
+
+    // Add tag filter
+    if (tag) {
+      whereConditions.push('t.slug = ?');
+      params.push(tag);
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    // Get posts with author, categories, and tags
+    const [posts] = await pool.execute(`
+      SELECT DISTINCT 
+        p.id, p.title, p.slug, p.excerpt, p.featured_image, 
+        p.status, p.views_count, p.created_at, p.published_at,
+        u.username as author_name,
+        GROUP_CONCAT(DISTINCT c.name) as categories,
+        GROUP_CONCAT(DISTINCT t.name) as tags
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      LEFT JOIN tags t ON pt.tag_id = t.id
+      WHERE ${whereClause}
+      GROUP BY p.id
+      ORDER BY p.published_at DESC, p.created_at DESC
+      LIMIT ? OFFSET ?
+    `, [...params, parseInt(limit), offset]);
+
+    // Get total count
+    const [countResult] = await pool.execute(`
+      SELECT COUNT(DISTINCT p.id) as total
+      FROM posts p
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      LEFT JOIN tags t ON pt.tag_id = t.id
+      WHERE ${whereClause}
+    `, params);
+
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      posts: posts.map(post => ({
+        ...post,
+        categories: post.categories ? post.categories.split(',') : [],
+        tags: post.tags ? post.tags.split(',') : []
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Get posts error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get single post by slug
+router.get('/:slug', optionalAuth, async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    // Get post with author, categories, and tags
+    const [posts] = await pool.execute(`
+      SELECT 
+        p.*, u.username as author_name,
+        GROUP_CONCAT(DISTINCT c.name) as categories,
+        GROUP_CONCAT(DISTINCT c.slug) as category_slugs,
+        GROUP_CONCAT(DISTINCT t.name) as tags,
+        GROUP_CONCAT(DISTINCT t.slug) as tag_slugs
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      LEFT JOIN tags t ON pt.tag_id = t.id
+      WHERE p.slug = ?
+      GROUP BY p.id
+    `, [slug]);
+
+    if (posts.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const post = posts[0];
+
+    // Increment view count for published posts
+    if (post.status === 'published') {
+      await pool.execute(
+        'UPDATE posts SET views_count = views_count + 1 WHERE id = ?',
+        [post.id]
+      );
+    }
+
+    // Get related posts (same categories or tags)
+    const [relatedPosts] = await pool.execute(`
+      SELECT DISTINCT 
+        p.id, p.title, p.slug, p.excerpt, p.featured_image, p.published_at,
+        u.username as author_name
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      WHERE p.status = 'published' 
+        AND p.id != ?
+        AND (pc.category_id IN (
+          SELECT category_id FROM post_categories WHERE post_id = ?
+        ) OR pt.tag_id IN (
+          SELECT tag_id FROM post_tags WHERE post_id = ?
+        ))
+      GROUP BY p.id
+      ORDER BY p.published_at DESC
+      LIMIT 5
+    `, [post.id, post.id, post.id]);
+
+    res.json({
+      post: {
+        ...post,
+        categories: post.categories ? post.categories.split(',') : [],
+        category_slugs: post.category_slugs ? post.category_slugs.split(',') : [],
+        tags: post.tags ? post.tags.split(',') : [],
+        tag_slugs: post.tag_slugs ? post.tag_slugs.split(',') : []
+      },
+      relatedPosts
+    });
+  } catch (error) {
+    console.error('Get post error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create new post (admin only)
+router.post('/', authenticateToken, requireAdmin, createPostValidation, async (req, res) => {
+  try {
+    const { title, content, excerpt, featured_image, status, categories, tags } = req.body;
+    const slug = createSlug(title);
+
+    // Check if slug already exists
+    const [existingPosts] = await pool.execute(
+      'SELECT id FROM posts WHERE slug = ?',
+      [slug]
+    );
+
+    if (existingPosts.length > 0) {
+      return res.status(400).json({ error: 'A post with this title already exists' });
+    }
+
+    // Create post
+    const [result] = await pool.execute(`
+      INSERT INTO posts (title, slug, content, excerpt, featured_image, status, author_id, published_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      title, 
+      slug, 
+      content, 
+      excerpt, 
+      featured_image, 
+      status, 
+      req.user.id,
+      status === 'published' ? new Date() : null
+    ]);
+
+    const postId = result.insertId;
+
+    // Add categories
+    if (categories && categories.length > 0) {
+      for (const categoryId of categories) {
+        await pool.execute(
+          'INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)',
+          [postId, categoryId]
+        );
+      }
+    }
+
+    // Add tags
+    if (tags && tags.length > 0) {
+      for (const tagId of tags) {
+        await pool.execute(
+          'INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)',
+          [postId, tagId]
+        );
+      }
+    }
+
+    // Get created post
+    const [newPosts] = await pool.execute(`
+      SELECT 
+        p.*, u.username as author_name,
+        GROUP_CONCAT(DISTINCT c.name) as categories,
+        GROUP_CONCAT(DISTINCT t.name) as tags
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      LEFT JOIN tags t ON pt.tag_id = t.id
+      WHERE p.id = ?
+      GROUP BY p.id
+    `, [postId]);
+
+    res.status(201).json({
+      message: 'Post created successfully',
+      post: {
+        ...newPosts[0],
+        categories: newPosts[0].categories ? newPosts[0].categories.split(',') : [],
+        tags: newPosts[0].tags ? newPosts[0].tags.split(',') : []
+      }
+    });
+  } catch (error) {
+    console.error('Create post error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update post (admin only)
+router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, excerpt, featured_image, status, categories, tags } = req.body;
+
+    // Check if post exists
+    const [existingPosts] = await pool.execute(
+      'SELECT * FROM posts WHERE id = ?',
+      [id]
+    );
+
+    if (existingPosts.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const post = existingPosts[0];
+    let slug = post.slug;
+
+    // Update slug if title changed
+    if (title && title !== post.title) {
+      slug = createSlug(title);
+      
+      // Check if new slug already exists
+      const [slugCheck] = await pool.execute(
+        'SELECT id FROM posts WHERE slug = ? AND id != ?',
+        [slug, id]
+      );
+
+      if (slugCheck.length > 0) {
+        return res.status(400).json({ error: 'A post with this title already exists' });
+      }
+    }
+
+    // Update post
+    await pool.execute(`
+      UPDATE posts 
+      SET title = ?, slug = ?, content = ?, excerpt = ?, featured_image = ?, 
+          status = ?, published_at = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [
+      title || post.title,
+      slug,
+      content || post.content,
+      excerpt || post.excerpt,
+      featured_image || post.featured_image,
+      status || post.status,
+      status === 'published' && post.status !== 'published' ? new Date() : post.published_at,
+      id
+    ]);
+
+    // Update categories
+    if (categories !== undefined) {
+      // Remove existing categories
+      await pool.execute('DELETE FROM post_categories WHERE post_id = ?', [id]);
+      
+      // Add new categories
+      if (categories.length > 0) {
+        for (const categoryId of categories) {
+          await pool.execute(
+            'INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)',
+            [id, categoryId]
+          );
+        }
+      }
+    }
+
+    // Update tags
+    if (tags !== undefined) {
+      // Remove existing tags
+      await pool.execute('DELETE FROM post_tags WHERE post_id = ?', [id]);
+      
+      // Add new tags
+      if (tags.length > 0) {
+        for (const tagId of tags) {
+          await pool.execute(
+            'INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)',
+            [id, tagId]
+          );
+        }
+      }
+    }
+
+    // Get updated post
+    const [updatedPosts] = await pool.execute(`
+      SELECT 
+        p.*, u.username as author_name,
+        GROUP_CONCAT(DISTINCT c.name) as categories,
+        GROUP_CONCAT(DISTINCT t.name) as tags
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      LEFT JOIN tags t ON pt.tag_id = t.id
+      WHERE p.id = ?
+      GROUP BY p.id
+    `, [id]);
+
+    res.json({
+      message: 'Post updated successfully',
+      post: {
+        ...updatedPosts[0],
+        categories: updatedPosts[0].categories ? updatedPosts[0].categories.split(',') : [],
+        tags: updatedPosts[0].tags ? updatedPosts[0].tags.split(',') : []
+      }
+    });
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete post (admin only)
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if post exists
+    const [posts] = await pool.execute(
+      'SELECT id FROM posts WHERE id = ?',
+      [id]
+    );
+
+    if (posts.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Delete post (cascading will handle related records)
+    await pool.execute('DELETE FROM posts WHERE id = ?', [id]);
+
+    res.json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+module.exports = router; 
