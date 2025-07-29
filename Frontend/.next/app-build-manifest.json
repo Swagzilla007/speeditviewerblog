@@ -26,6 +26,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/admin/login/page.js"
     ],
+    "/admin/login/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/login/layout.js"
+    ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",

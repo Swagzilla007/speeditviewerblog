@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import apiClient from '@/lib/api'
 import { User } from '@/types'
 import { LogOut, Menu, X } from 'lucide-react'
@@ -13,11 +13,21 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Skip authentication check for login page
+  const isLoginPage = pathname === '/admin/login'
+
   useEffect(() => {
+    // Skip authentication check for login page
+    if (isLoginPage) {
+      setLoading(false)
+      return
+    }
+
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('auth_token')
@@ -43,7 +53,7 @@ export default function AdminLayout({
     }
 
     checkAuth()
-  }, [router])
+  }, [router, isLoginPage])
 
   const handleLogout = () => {
     apiClient.removeAuthToken()
@@ -56,6 +66,11 @@ export default function AdminLayout({
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
+  }
+
+  // For login page, render children without authentication
+  if (isLoginPage) {
+    return <>{children}</>
   }
 
   if (!user) {

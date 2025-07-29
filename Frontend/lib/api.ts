@@ -53,7 +53,7 @@ class ApiClient {
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
           if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+            window.location.href = '/admin/login';
           }
         }
         return Promise.reject(error);

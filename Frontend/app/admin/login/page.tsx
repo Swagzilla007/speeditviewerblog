@@ -20,8 +20,12 @@ export default function AdminLoginPage() {
   } = useForm<LoginForm>()
 
   const loginMutation = useMutation({
-    mutationFn: (credentials: LoginForm) => apiClient.login(credentials),
+    mutationFn: (credentials: LoginForm) => {
+      console.log('Calling API with credentials:', credentials)
+      return apiClient.login(credentials)
+    },
     onSuccess: (response) => {
+      console.log('Login success response:', response)
       if (response.success) {
         apiClient.setAuthToken(response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
@@ -32,11 +36,13 @@ export default function AdminLoginPage() {
       }
     },
     onError: (error: any) => {
+      console.log('Login error:', error)
       toast.error(error.response?.data?.message || 'Login failed')
     }
   })
 
   const onSubmit = (data: LoginForm) => {
+    console.log('Form submitted with data:', data)
     loginMutation.mutate(data)
   }
 
@@ -52,107 +58,105 @@ export default function AdminLoginPage() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="card">
-          <div className="card-body">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email Address
-                </label>
-                <div className="mt-1 relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    {...register('email', {
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: 'Please enter a valid email address'
-                      }
-                    })}
-                    className="input pl-10"
-                    placeholder="Enter your email"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                )}
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <div className="mt-1 relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  {...register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: 'Please enter a valid email address'
+                    }
+                  })}
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter your email"
+                />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
+            </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="mt-1 relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    {...register('password', {
-                      required: 'Password is required',
-                      minLength: {
-                        value: 6,
-                        message: 'Password must be at least 6 characters'
-                      }
-                    })}
-                    className="input pl-10 pr-10"
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-                )}
-              </div>
-
-              <div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  {...register('password', {
+                    required: 'Password is required',
+                    minLength: {
+                      value: 6,
+                      message: 'Password must be at least 6 characters'
+                    }
+                  })}
+                  className="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter your password"
+                />
                 <button
-                  type="submit"
-                  disabled={isSubmitting || loginMutation.isPending}
-                  className="w-full btn-primary"
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {isSubmitting || loginMutation.isPending ? (
-                    <div className="flex items-center justify-center">
-                      <div className="spinner h-4 w-4 mr-2"></div>
-                      Signing in...
-                    </div>
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
                   ) : (
-                    'Sign in'
+                    <Eye className="h-5 w-5" />
                   )}
                 </button>
               </div>
-            </form>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials:</h3>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p><strong>Email:</strong> wkgayathra@gmail.com</p>
-                <p><strong>Password:</strong> gayathra123</p>
-              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
-            <div className="mt-6 text-center">
-              <a
-                href="/"
-                className="text-sm text-primary-600 hover:text-primary-500"
+            <div>
+              <button
+                type="submit"
+                disabled={isSubmitting || loginMutation.isPending}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                ← Back to Blog
-              </a>
+                {isSubmitting || loginMutation.isPending ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Signing in...
+                  </div>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
             </div>
+          </form>
+
+          {/* Demo Credentials */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials:</h3>
+            <div className="text-sm text-blue-800 space-y-1">
+              <p><strong>Email:</strong> wkgayathra@gmail.com</p>
+              <p><strong>Password:</strong> gayathra123</p>
+            </div>
+          </div>
+
+          <div className="mt-6 text-center">
+            <a
+              href="/"
+              className="text-sm text-blue-600 hover:text-blue-500"
+            >
+              ← Back to Blog
+            </a>
           </div>
         </div>
       </div>

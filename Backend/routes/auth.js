@@ -10,12 +10,12 @@ const router = express.Router();
 // Login route
 router.post('/login', loginValidation, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    // Find user by username
+    // Find user by email
     const [users] = await pool.execute(
-      'SELECT * FROM users WHERE username = ?',
-      [username]
+      'SELECT * FROM users WHERE email = ?',
+      [email]
     );
 
     if (users.length === 0) {
@@ -41,9 +41,12 @@ router.post('/login', loginValidation, async (req, res) => {
     const { password: _, ...userWithoutPassword } = user;
     
     res.json({
-      message: 'Login successful',
-      user: userWithoutPassword,
-      token
+      success: true,
+      data: {
+        user: userWithoutPassword,
+        token
+      },
+      message: 'Login successful'
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -55,7 +58,11 @@ router.post('/login', loginValidation, async (req, res) => {
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const { password: _, ...userWithoutPassword } = req.user;
-    res.json({ user: userWithoutPassword });
+    res.json({ 
+      success: true,
+      data: userWithoutPassword,
+      message: 'Profile retrieved successfully'
+    });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Internal server error' });
