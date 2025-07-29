@@ -63,6 +63,8 @@ export default function NewPostPage() {
     
     const postData = {
       ...formData,
+      categories: formData.category_ids,
+      tags: formData.tag_ids,
       file_ids: uploadedFiles.map(f => f.id)
     }
 
