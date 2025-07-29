@@ -8,17 +8,57 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Primary dark blue
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#f0f2ff',
+          100: '#e1e5ff',
+          200: '#c3cbff',
+          300: '#a5b1ff',
+          400: '#8797ff',
+          500: '#697dff',
+          600: '#1e88e5', // Main primary color
+          700: '#1565c0',
+          800: '#0d47a1',
+          900: '#1a1a2e', // Dark primary
+        },
+        // Orange accent
+        orange: {
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ff9800', // Main orange color
+          700: '#ea580c',
+          800: '#c2410c',
+          900: '#9a3412',
+        },
+        // Yellow accent
+        yellow: {
+          50: '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',
+          400: '#facc15',
+          500: '#eab308',
+          600: '#ffc107', // Main yellow color
+          700: '#a16207',
+          800: '#854d0e',
+          900: '#713f12',
+        },
+        // Dark theme colors
+        dark: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#1a1a2e', // Dark primary
         },
         gray: {
           50: '#f9fafb',
@@ -43,35 +83,35 @@ module.exports = {
             maxWidth: 'none',
             color: '#374151',
             a: {
-              color: '#3b82f6',
+              color: '#1e88e5',
               '&:hover': {
-                color: '#2563eb',
+                color: '#1565c0',
               },
             },
             h1: {
-              color: '#111827',
+              color: '#1a1a2e',
             },
             h2: {
-              color: '#111827',
+              color: '#1a1a2e',
             },
             h3: {
-              color: '#111827',
+              color: '#1a1a2e',
             },
             h4: {
-              color: '#111827',
+              color: '#1a1a2e',
             },
             strong: {
-              color: '#111827',
+              color: '#1a1a2e',
             },
             code: {
-              color: '#dc2626',
+              color: '#ff9800',
               backgroundColor: '#f3f4f6',
               padding: '0.125rem 0.25rem',
               borderRadius: '0.25rem',
             },
             pre: {
-              backgroundColor: '#1f2937',
-              color: '#f9fafb',
+              backgroundColor: '#1a1a2e',
+              color: '#ffffff',
             },
           },
         },

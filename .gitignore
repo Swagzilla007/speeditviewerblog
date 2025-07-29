@@ -18,6 +18,7 @@ Thumbs.db
 
 # Build output
 dist/
+/.next/
 build/
 
 # Misc

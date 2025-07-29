@@ -50,9 +50,15 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
+          // Don't redirect if we're already on the login page or if it's a login attempt
+          const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/admin/login';
+          const isLoginAttempt = error.config?.url?.includes('/auth/login');
+          
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user');
-          if (typeof window !== 'undefined') {
+          
+          // Only redirect if not on login page and not a login attempt
+          if (typeof window !== 'undefined' && !isLoginPage && !isLoginAttempt) {
             window.location.href = '/admin/login';
           }
         }
