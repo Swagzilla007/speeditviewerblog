@@ -50,9 +50,7 @@ router.get('/', optionalAuth, paginationValidation, async (req, res) => {
       SELECT DISTINCT 
         p.id, p.title, p.slug, p.excerpt, p.featured_image, 
         p.status, p.views_count, p.created_at, p.published_at,
-        u.username as author_name,
-        GROUP_CONCAT(DISTINCT c.name) as categories,
-        GROUP_CONCAT(DISTINCT t.name) as tags
+        u.username as author_name
       FROM posts p
       LEFT JOIN users u ON p.author_id = u.id
       LEFT JOIN post_categories pc ON p.id = pc.post_id
@@ -64,6 +62,33 @@ router.get('/', optionalAuth, paginationValidation, async (req, res) => {
       ORDER BY p.published_at DESC, p.created_at DESC
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), offset]);
+
+    // Get categories and tags for each post
+    const postsWithRelations = await Promise.all(posts.map(async (post) => {
+      const [categories] = await pool.execute(`
+        SELECT c.id, c.name, c.slug, c.description
+        FROM categories c
+        INNER JOIN post_categories pc ON c.id = pc.category_id
+        WHERE pc.post_id = ?
+      `, [post.id]);
+
+      const [tags] = await pool.execute(`
+        SELECT t.id, t.name, t.slug
+        FROM tags t
+        INNER JOIN post_tags pt ON t.id = pt.tag_id
+        WHERE pt.post_id = ?
+      `, [post.id]);
+
+      return {
+        ...post,
+        author: {
+          id: post.author_id,
+          username: post.author_name
+        },
+        categories: categories,
+        tags: tags
+      };
+    }));
 
     // Get total count
     const [countResult] = await pool.execute(`
@@ -80,11 +105,7 @@ router.get('/', optionalAuth, paginationValidation, async (req, res) => {
     const totalPages = Math.ceil(total / limit);
 
     res.json({
-      posts: posts.map(post => ({
-        ...post,
-        categories: post.categories ? post.categories.split(',') : [],
-        tags: post.tags ? post.tags.split(',') : []
-      })),
+      posts: postsWithRelations,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -103,22 +124,13 @@ router.get('/:slug', optionalAuth, async (req, res) => {
   try {
     const { slug } = req.params;
 
-    // Get post with author, categories, and tags
+    // Get post with author
     const [posts] = await pool.execute(`
       SELECT 
-        p.*, u.username as author_name,
-        GROUP_CONCAT(DISTINCT c.name) as categories,
-        GROUP_CONCAT(DISTINCT c.slug) as category_slugs,
-        GROUP_CONCAT(DISTINCT t.name) as tags,
-        GROUP_CONCAT(DISTINCT t.slug) as tag_slugs
+        p.*, u.username as author_name
       FROM posts p
       LEFT JOIN users u ON p.author_id = u.id
-      LEFT JOIN post_categories pc ON p.id = pc.post_id
-      LEFT JOIN categories c ON pc.category_id = c.id
-      LEFT JOIN post_tags pt ON p.id = pt.post_id
-      LEFT JOIN tags t ON pt.tag_id = t.id
       WHERE p.slug = ?
-      GROUP BY p.id
     `, [slug]);
 
     if (posts.length === 0) {
@@ -126,6 +138,22 @@ router.get('/:slug', optionalAuth, async (req, res) => {
     }
 
     const post = posts[0];
+
+    // Get categories for this post
+    const [categories] = await pool.execute(`
+      SELECT c.id, c.name, c.slug, c.description
+      FROM categories c
+      INNER JOIN post_categories pc ON c.id = pc.category_id
+      WHERE pc.post_id = ?
+    `, [post.id]);
+
+    // Get tags for this post
+    const [tags] = await pool.execute(`
+      SELECT t.id, t.name, t.slug
+      FROM tags t
+      INNER JOIN post_tags pt ON t.id = pt.tag_id
+      WHERE pt.post_id = ?
+    `, [post.id]);
 
     // Increment view count for published posts
     if (post.status === 'published') {
@@ -159,10 +187,12 @@ router.get('/:slug', optionalAuth, async (req, res) => {
     res.json({
       post: {
         ...post,
-        categories: post.categories ? post.categories.split(',') : [],
-        category_slugs: post.category_slugs ? post.category_slugs.split(',') : [],
-        tags: post.tags ? post.tags.split(',') : [],
-        tag_slugs: post.tag_slugs ? post.tag_slugs.split(',') : []
+        author: {
+          id: post.author_id,
+          username: post.author_name
+        },
+        categories: categories,
+        tags: tags
       },
       relatedPosts
     });

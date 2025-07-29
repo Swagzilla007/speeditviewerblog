@@ -104,7 +104,7 @@ class ApiClient {
     return response.data;
   }
 
-  async getPost(slug: string): Promise<ApiResponse<Post>> {
+  async getPost(slug: string): Promise<{ post: Post, relatedPosts: Post[] }> {
     const response = await this.client.get(`/posts/${slug}`);
     return response.data;
   }
