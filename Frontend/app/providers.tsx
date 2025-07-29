@@ -1,22 +1,52 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'react-hot-toast'
-import { useState } from 'react'
+import { Toaster, toast } from 'react-hot-toast'
+import { useState, useEffect } from 'react'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 1,
+        retry: (failureCount, error: any) => {
+          // Don't retry on 429 errors
+          if (error?.response?.status === 429) {
+            return false
+          }
+          return failureCount < 2
+        },
         refetchOnWindowFocus: false,
         staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+        refetchOnMount: true,
+        refetchOnReconnect: true,
       },
       mutations: {
-        retry: 1,
+        retry: (failureCount, error: any) => {
+          // Don't retry on 429 errors
+          if (error?.response?.status === 429) {
+            return false
+          }
+          return failureCount < 1
+        },
       },
     },
   }))
+
+  // Listen for rate limiting errors
+  useEffect(() => {
+    const handleShowToast = (event: CustomEvent) => {
+      if (event.detail.type === 'error') {
+        toast.error(event.detail.message)
+      }
+    }
+
+    window.addEventListener('show-toast', handleShowToast as EventListener)
+    
+    return () => {
+      window.removeEventListener('show-toast', handleShowToast as EventListener)
+    }
+  }, [])
 
   return (
     <QueryClientProvider client={queryClient}>

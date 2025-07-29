@@ -16,33 +16,37 @@ import {
 import Link from 'next/link'
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['admin-stats'],
+  const { data: stats, isLoading, error } = useQuery({
+    queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const [postsRes, categoriesRes, tagsRes, filesRes, requestsRes] = await Promise.all([
-        apiClient.getPosts({ limit: 1 }),
-        apiClient.getCategories(),
-        apiClient.getTags(),
-        apiClient.getFiles(),
-        apiClient.getDownloadRequests()
-      ])
-      
-      return {
-        posts: postsRes.data.pagination.total,
-        categories: categoriesRes.data.length,
-        tags: tagsRes.data.length,
-        files: filesRes.data.pagination.total,
-        requests: requestsRes.data.pagination.total,
-        pendingRequests: requestsRes.data.data.filter((r: any) => r.status === 'pending').length
+      try {
+        console.log('Fetching dashboard stats...')
+        console.log('API URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api')
+        
+        const stats = await apiClient.getDashboardStats()
+        console.log('Dashboard stats:', stats)
+        return stats
+      } catch (error: any) {
+        console.error('Error fetching dashboard stats:', error)
+        console.error('Error details:', {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: error.config
+        })
+        throw error
       }
-    }
+    },
+    retry: 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
   const { data: recentPosts } = useQuery({
     queryKey: ['recent-posts'],
     queryFn: async () => {
       const response = await apiClient.getPosts({ limit: 5 })
-      return response.data.data
+      return response.posts
     }
   })
 
@@ -50,7 +54,7 @@ export default function AdminDashboard() {
     queryKey: ['recent-requests'],
     queryFn: async () => {
       const response = await apiClient.getDownloadRequests({ limit: 5 })
-      return response.data.data
+      return response.requests
     }
   })
 
@@ -64,6 +68,23 @@ export default function AdminDashboard() {
               <div className="h-8 bg-gray-200 rounded w-1/2"></div>
             </div>
           ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-red-900 mb-2">Error Loading Dashboard</h3>
+          <p className="text-red-700 mb-4">There was an error loading the dashboard data.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -85,7 +106,7 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Posts</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.posts || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalPosts || 0}</p>
             </div>
           </div>
         </div>
@@ -97,7 +118,7 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Categories</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.categories || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalCategories || 0}</p>
             </div>
           </div>
         </div>
@@ -109,7 +130,7 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Tags</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.tags || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalTags || 0}</p>
             </div>
           </div>
         </div>
@@ -121,7 +142,7 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Files</p>
-              <p className="text-2xl font-bold text-gray-900">{stats?.files || 0}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalFiles || 0}</p>
             </div>
           </div>
         </div>
@@ -262,7 +283,7 @@ export default function AdminDashboard() {
                           {request.status}
                         </span>
                         <span className="text-xs text-gray-500 ml-2">
-                          {new Date(request.created_at).toLocaleDateString()}
+                          {new Date(request.request_date).toLocaleDateString()}
                         </span>
                       </div>
                     </div>

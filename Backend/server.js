@@ -37,12 +37,27 @@ app.use(helmet({
   },
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+// Environment-based Rate Limiting
+// const RATE_LIMIT_ENABLED = process.env.RATE_LIMIT_ENABLED !== 'false';
+// const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000; // 15 minutes default
+// const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100; // 100 requests default
+
+// if (RATE_LIMIT_ENABLED) {
+//   const limiter = rateLimit({
+//     windowMs: RATE_LIMIT_WINDOW_MS,
+//     max: RATE_LIMIT_MAX_REQUESTS,
+//     message: {
+//       error: 'Too many requests, please try again later.',
+//       retryAfter: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)
+//     },
+//     standardHeaders: true,
+//     legacyHeaders: false,
+//   });
+//   app.use(limiter);
+//   console.log(`Rate limiting: ${RATE_LIMIT_MAX_REQUESTS} requests per ${RATE_LIMIT_WINDOW_MS / 1000 / 60} minutes`);
+// } else {
+//   console.log('Rate limiting: DISABLED');
+// }
 
 // Logging middleware
 app.use(morgan('combined'));

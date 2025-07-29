@@ -368,6 +368,98 @@ router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async 
   }
 });
 
+// Get dashboard stats (admin only)
+router.get('/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Get counts in parallel
+    const [postsCount] = await pool.execute('SELECT COUNT(*) as total FROM posts');
+    const [publishedPostsCount] = await pool.execute("SELECT COUNT(*) as total FROM posts WHERE status = 'published'");
+    const [draftPostsCount] = await pool.execute("SELECT COUNT(*) as total FROM posts WHERE status = 'draft'");
+    const [categoriesCount] = await pool.execute('SELECT COUNT(*) as total FROM categories');
+    const [tagsCount] = await pool.execute('SELECT COUNT(*) as total FROM tags');
+    const [filesCount] = await pool.execute('SELECT COUNT(*) as total FROM files');
+    const [requestsCount] = await pool.execute('SELECT COUNT(*) as total FROM download_requests');
+    const [pendingRequestsCount] = await pool.execute("SELECT COUNT(*) as total FROM download_requests WHERE status = 'pending'");
+    const [usersCount] = await pool.execute('SELECT COUNT(*) as total FROM users');
+
+    res.json({
+      totalPosts: postsCount[0].total,
+      publishedPosts: publishedPostsCount[0].total,
+      draftPosts: draftPostsCount[0].total,
+      totalCategories: categoriesCount[0].total,
+      totalTags: tagsCount[0].total,
+      totalFiles: filesCount[0].total,
+      totalRequests: requestsCount[0].total,
+      pendingRequests: pendingRequestsCount[0].total,
+      totalUsers: usersCount[0].total
+    });
+  } catch (error) {
+    console.error('Get dashboard stats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get single post by ID (admin only)
+router.get('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get post with author, categories, tags, and files
+    const [posts] = await pool.execute(`
+      SELECT 
+        p.*, u.username as author_name,
+        GROUP_CONCAT(DISTINCT c.id) as category_ids,
+        GROUP_CONCAT(DISTINCT c.name) as category_names,
+        GROUP_CONCAT(DISTINCT t.id) as tag_ids,
+        GROUP_CONCAT(DISTINCT t.name) as tag_names
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      LEFT JOIN post_categories pc ON p.id = pc.post_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      LEFT JOIN post_tags pt ON p.id = pt.post_id
+      LEFT JOIN tags t ON pt.tag_id = t.id
+      WHERE p.id = ?
+      GROUP BY p.id
+    `, [id]);
+
+    if (posts.length === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const post = posts[0];
+
+    // Get files associated with this post
+    const [files] = await pool.execute(`
+      SELECT * FROM files WHERE post_id = ?
+    `, [id]);
+
+    // Get categories and tags as objects
+    const [categories] = await pool.execute(`
+      SELECT c.* FROM categories c
+      INNER JOIN post_categories pc ON c.id = pc.category_id
+      WHERE pc.post_id = ?
+    `, [id]);
+
+    const [tags] = await pool.execute(`
+      SELECT t.* FROM tags t
+      INNER JOIN post_tags pt ON t.id = pt.tag_id
+      WHERE pt.post_id = ?
+    `, [id]);
+
+    res.json({
+      post: {
+        ...post,
+        categories,
+        tags,
+        files
+      }
+    });
+  } catch (error) {
+    console.error('Get post by ID error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Delete post (admin only)
 router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {

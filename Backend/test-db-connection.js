@@ -1,53 +1,71 @@
 const mysql = require('mysql2/promise');
-
-// Database configuration (same as in your .env file)
-const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: '', // XAMPP default has no password
-  database: 'blog_management',
-  port: 3306
-};
+require('dotenv').config();
 
 async function testConnection() {
+  let connection;
+  
   try {
-    console.log('🔌 Testing database connection...');
-    console.log('Database config:', { ...dbConfig, password: '***' });
-    
-    const connection = await mysql.createConnection(dbConfig);
-    console.log('✅ Database connected successfully!');
-    
-    // Test query to check if tables exist
-    const [tables] = await connection.execute('SHOW TABLES');
-    console.log('📋 Available tables:');
-    tables.forEach(table => {
-      console.log(`  - ${Object.values(table)[0]}`);
+    // Create connection
+    connection = await mysql.createConnection({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'blog_management',
+      port: process.env.DB_PORT || 3306
     });
-    
-    // Test query to check admin user
-    const [users] = await connection.execute('SELECT username, email, role FROM users WHERE role = "admin"');
-    console.log('👤 Admin users:');
-    users.forEach(user => {
-      console.log(`  - ${user.username} (${user.email}) - ${user.role}`);
-    });
-    
-    // Test query to check categories
-    const [categories] = await connection.execute('SELECT name, slug FROM categories');
-    console.log('📂 Categories:');
-    categories.forEach(category => {
-      console.log(`  - ${category.name} (${category.slug})`);
-    });
-    
-    await connection.end();
-    console.log('✅ Database connection test completed successfully!');
-    
+
+    console.log('✅ Database connection successful!');
+
+    // Test basic queries
+    const [categories] = await connection.execute('SELECT COUNT(*) as count FROM categories');
+    const [tags] = await connection.execute('SELECT COUNT(*) as count FROM tags');
+    const [posts] = await connection.execute('SELECT COUNT(*) as count FROM posts');
+    const [files] = await connection.execute('SELECT COUNT(*) as count FROM files');
+    const [users] = await connection.execute('SELECT COUNT(*) as count FROM users');
+
+    console.log('📊 Current database counts:');
+    console.log(`   Categories: ${categories[0].count}`);
+    console.log(`   Tags: ${tags[0].count}`);
+    console.log(`   Posts: ${posts[0].count}`);
+    console.log(`   Files: ${files[0].count}`);
+    console.log(`   Users: ${users[0].count}`);
+
+    // Add sample data if database is empty
+    if (categories[0].count === 0) {
+      console.log('📝 Adding sample categories...');
+      await connection.execute("INSERT INTO categories (name, slug, description) VALUES ('Technology', 'technology', 'Tech-related posts')");
+      await connection.execute("INSERT INTO categories (name, slug, description) VALUES ('Lifestyle', 'lifestyle', 'Lifestyle and personal posts')");
+      await connection.execute("INSERT INTO categories (name, slug, description) VALUES ('Business', 'business', 'Business and entrepreneurship')");
+    }
+
+    if (tags[0].count === 0) {
+      console.log('📝 Adding sample tags...');
+      await connection.execute("INSERT INTO tags (name, slug) VALUES ('javascript', 'javascript')");
+      await connection.execute("INSERT INTO tags (name, slug) VALUES ('react', 'react')");
+      await connection.execute("INSERT INTO tags (name, slug) VALUES ('nodejs', 'nodejs')");
+      await connection.execute("INSERT INTO tags (name, slug) VALUES ('web-development', 'web-development')");
+    }
+
+    if (posts[0].count === 0) {
+      console.log('📝 Adding sample posts...');
+      await connection.execute(`
+        INSERT INTO posts (title, slug, content, excerpt, status, author_id, published_at) 
+        VALUES ('Welcome to Our Blog', 'welcome-to-our-blog', 'This is our first blog post content...', 'Welcome to our new blog!', 'published', 1, NOW())
+      `);
+      await connection.execute(`
+        INSERT INTO posts (title, slug, content, excerpt, status, author_id, published_at) 
+        VALUES ('Getting Started with React', 'getting-started-with-react', 'React is a powerful JavaScript library...', 'Learn the basics of React development', 'published', 1, NOW())
+      `);
+    }
+
+    console.log('✅ Database test completed successfully!');
+
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
-    console.log('\n🔧 Troubleshooting tips:');
-    console.log('1. Make sure XAMPP MySQL service is running');
-    console.log('2. Check if database "blog_management" exists');
-    console.log('3. Verify username/password in .env file');
-    console.log('4. Try connecting via phpMyAdmin first');
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 }
 

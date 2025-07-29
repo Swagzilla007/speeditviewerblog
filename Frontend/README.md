@@ -1,269 +1,177 @@
 # Blog Management System - Frontend
 
-A modern, responsive frontend for the Blog Management System built with Next.js 14, TypeScript, and Tailwind CSS.
+A modern blog management system built with Next.js 14, TypeScript, and Tailwind CSS. This frontend application provides both an admin panel for content management and a user-facing blog interface.
 
-## 🚀 Features
+## Features
 
-### User-Facing Blog Website
+### Admin Panel
 
-- **Home Page / Blog Feed**: Lists all published blog posts with title, excerpt, category, author, and thumbnail
-- **Post Detail Page**: Displays full blog content with formatting, categories, tags, and related posts
-- **Search & Filter**: Filter by category, tags, and keyword-based search
-- **Pagination**: Smooth pagination for large post collections
-- **Responsive Design**: Mobile-first responsive design
+- **Authentication**: Secure admin login with JWT tokens
+- **Dashboard**: Overview of posts, categories, tags, files, and download requests
+- **Posts Management**:
+  - Create, edit, and delete blog posts
+  - Rich text editor for content
+  - Post status management (draft, published, scheduled)
+  - Category and tag assignment
+  - File attachments
+  - Featured image support
+- **Categories Management**: Create, edit, and delete categories
+- **Tags Management**: Create, edit, and delete tags
+- **Files Management**:
+  - Upload and manage files
+  - File visibility settings (public/private)
+  - Download tracking
+  - File metadata editing
+- **Download Requests**: (Coming soon) Manage user download requests for private files
 
-### Admin Panel Features
+### User Interface (Coming Soon)
 
-- **Authentication**: Secure login system for admin access
-- **Dashboard**: Overview of blog statistics and recent activity
-- **Post Management**: Create, edit, delete, and manage blog posts
-- **Rich Text Editor**: TipTap editor with formatting, images, videos, and links
-- **Categories & Tags**: Manage categories and tags with slug generation
-- **File Management**: Upload and manage downloadable files
-- **Download Requests**: Approve/deny user download requests
-- **Post Preview**: Preview posts before publishing
-- **Post Scheduling**: Schedule posts for future publication
+- Public blog viewing
+- Post search and filtering
+- Category and tag browsing
+- File download requests
+- Responsive design
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 14 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **State Management**: React Query (TanStack Query)
-- **Forms**: React Hook Form
-- **Rich Text Editor**: TipTap
+- **State Management**: TanStack Query (React Query)
 - **HTTP Client**: Axios
 - **Icons**: Lucide React
+- **Forms**: React Hook Form
 - **Notifications**: React Hot Toast
-- **Date Handling**: date-fns
-- **Utilities**: clsx, tailwind-merge
+- **Rich Text Editor**: TipTap (planned)
 
-## 📦 Installation
+## Getting Started
 
-1. **Navigate to the frontend directory**:
+### Prerequisites
 
-   ```bash
-   cd Frontend
-   ```
+- Node.js 18+
+- npm or yarn
+- Backend API running (see Backend README)
 
-2. **Install dependencies**:
+### Installation
 
-   ```bash
-   npm install
-   ```
-
-3. **Create environment file**:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-4. **Configure environment variables**:
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
-   NEXT_PUBLIC_APP_TYPE=user
-   ```
-
-## 🚀 Development
-
-### Start Development Server
-
-**For User-Facing Blog (Port 3000)**:
+1. Clone the repository:
 
 ```bash
-npm run dev:user
+git clone <repository-url>
+cd speeditviewerblog/Frontend
 ```
 
-**For Admin Panel (Port 3001)**:
+2. Install dependencies:
 
 ```bash
-npm run dev:admin
+npm install
 ```
 
-**Default (Port 3000)**:
+3. Set up environment variables:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` and add your backend API URL:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
+
+4. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-### Build for Production
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-**Build User-Facing Blog**:
+### Admin Panel Access
 
-```bash
-npm run build:user
-```
+1. Navigate to `/admin/login`
+2. Use the admin credentials from your backend setup
+3. Access the admin panel at `/admin`
 
-**Build Admin Panel**:
-
-```bash
-npm run build:admin
-```
-
-**Build Both**:
-
-```bash
-npm run build
-```
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 Frontend/
-├── app/                    # Next.js App Router
-│   ├── admin/             # Admin panel routes
-│   │   └── login/         # Admin login page
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # User-facing homepage
-│   └── providers.tsx      # React Query & Toaster providers
-├── components/            # Reusable components
-├── lib/                   # Utilities and configurations
-│   ├── api.ts            # API client
-│   └── utils.ts          # Utility functions
-├── types/                 # TypeScript type definitions
-├── hooks/                 # Custom React hooks
-├── public/                # Static assets
-└── package.json           # Dependencies and scripts
+├── app/
+│   ├── admin/                 # Admin panel pages
+│   │   ├── layout.tsx        # Admin layout with sidebar
+│   │   ├── page.tsx          # Dashboard
+│   │   ├── login/            # Admin login
+│   │   ├── posts/            # Posts management
+│   │   ├── categories/       # Categories management
+│   │   ├── tags/             # Tags management
+│   │   └── files/            # Files management
+│   ├── globals.css           # Global styles
+│   ├── layout.tsx            # Root layout
+│   ├── page.tsx              # Home page
+│   └── providers.tsx         # React Query provider
+├── lib/
+│   ├── api.ts               # API client
+│   └── utils.ts             # Utility functions
+├── types/
+│   └── index.ts             # TypeScript type definitions
+└── public/                  # Static assets
 ```
 
-## 🎨 Components
+## API Integration
 
-### Core Components
+The frontend communicates with the backend through the API client in `lib/api.ts`. All API calls are handled with proper error handling and authentication.
 
-- **PostCard**: Display individual blog posts
-- **PostList**: Grid/list view of posts with pagination
-- **SearchFilters**: Search and filter interface
-- **RichTextEditor**: TipTap-based rich text editor
-- **FileUpload**: Drag-and-drop file upload component
-- **Pagination**: Page navigation component
+### Key API Features:
 
-### Admin Components
+- JWT token management
+- Automatic token refresh
+- Request/response interceptors
+- Error handling with automatic redirects
 
-- **AdminLayout**: Admin panel layout with sidebar
-- **Dashboard**: Admin dashboard with statistics
-- **PostForm**: Create/edit post form
-- **CategoryManager**: Category CRUD operations
-- **TagManager**: Tag CRUD operations
-- **FileManager**: File upload and management
-- **DownloadRequests**: Manage download requests
+## Styling
 
-## 🔌 API Integration
+The application uses Tailwind CSS with a custom color palette:
 
-The frontend communicates with the backend through a centralized API client (`lib/api.ts`) that provides:
+- **Primary**: Blue (#1e88e5)
+- **Secondary**: Orange (#ff9800)
+- **Accent**: Yellow (#ffc107)
+- **Dark**: Dark blue (#1a1a2e)
 
-- **Authentication**: Login, logout, profile management
-- **Posts**: CRUD operations, search, filtering
-- **Categories**: CRUD operations
-- **Tags**: CRUD operations
-- **Files**: Upload, download, management
-- **Download Requests**: Create, approve, deny requests
+## Development
 
-### API Features
+### Available Scripts
 
-- **Automatic Token Management**: JWT tokens handled automatically
-- **Error Handling**: Centralized error handling and user feedback
-- **Request/Response Interceptors**: Automatic auth header injection
-- **Type Safety**: Full TypeScript support for API responses
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-## 🎯 Key Features
+### Code Style
 
-### User Experience
+- TypeScript for type safety
+- ESLint for code quality
+- Prettier for code formatting
+- Tailwind CSS for styling
 
-- **Fast Loading**: Optimized with React Query caching
-- **Responsive Design**: Mobile-first approach
-- **Accessibility**: WCAG compliant components
-- **SEO Optimized**: Meta tags and structured data
-- **Progressive Enhancement**: Works without JavaScript
+## Deployment
 
-### Admin Experience
+The application can be deployed to any platform that supports Next.js:
 
-- **Rich Text Editing**: Full-featured TipTap editor
-- **File Management**: Drag-and-drop file uploads
-- **Real-time Preview**: Live post preview
-- **Bulk Operations**: Multi-select and bulk actions
-- **Advanced Filtering**: Complex search and filter options
+- Vercel (recommended)
+- Netlify
+- AWS Amplify
+- Self-hosted
 
-### Developer Experience
+### Environment Variables for Production
 
-- **Type Safety**: Full TypeScript coverage
-- **Hot Reload**: Fast development with Next.js
-- **Code Splitting**: Automatic code splitting
-- **Error Boundaries**: Graceful error handling
-- **Performance Monitoring**: Built-in performance tools
+Make sure to set the following environment variables in your production environment:
 
-## 🔧 Configuration
-
-### Environment Variables
-
-- `NEXT_PUBLIC_API_URL`: Backend API URL
-- `NEXT_PUBLIC_APP_TYPE`: Application type (user/admin)
-
-### Tailwind Configuration
-
-- Custom color palette
-- Typography plugin configuration
-- Custom animations and utilities
-- Responsive breakpoints
-
-### Next.js Configuration
-
-- Image optimization
-- API route handling
-- Static file serving
-- Performance optimizations
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. Connect your GitHub repository
-2. Set environment variables
-3. Deploy automatically on push
-
-### Other Platforms
-
-- **Netlify**: Configure build settings
-- **AWS Amplify**: Connect repository and configure
-- **Docker**: Use provided Dockerfile
-
-## 📱 Browser Support
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## 🔒 Security
-
-- **CSRF Protection**: Built-in Next.js protection
-- **XSS Prevention**: Sanitized content rendering
-- **Secure Headers**: Helmet.js integration
-- **Input Validation**: Client and server-side validation
-- **Authentication**: JWT token management
-
-## 🧪 Testing
-
-```bash
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
+```
+NEXT_PUBLIC_API_URL=https://your-api-domain.com/api
 ```
 
-## 📈 Performance
-
-- **Lighthouse Score**: 90+ across all metrics
-- **Core Web Vitals**: Optimized for all metrics
-- **Bundle Size**: Optimized with tree shaking
-- **Image Optimization**: Next.js Image component
-- **Caching**: Strategic caching strategies
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -271,18 +179,6 @@ npm run test:coverage
 4. Add tests if applicable
 5. Submit a pull request
 
-## 📄 License
+## License
 
-MIT License - see LICENSE file for details
-
-## 🆘 Support
-
-For support and questions:
-
-- Create an issue in the repository
-- Check the documentation
-- Review the troubleshooting guide
-
----
-
-**Built with ❤️ using Next.js, TypeScript, and Tailwind CSS**
+MIT License - see LICENSE file for details.

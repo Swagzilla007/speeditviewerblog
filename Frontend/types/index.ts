@@ -42,13 +42,13 @@ export interface Post {
   author: User;
   categories: Category[];
   tags: Tag[];
-  files: File[];
+  files: BlogFile[];
   created_at: string;
   updated_at: string;
 }
 
 // File Types
-export interface File {
+export interface BlogFile {
   id: number;
   filename: string;
   original_name: string;
@@ -72,7 +72,7 @@ export interface DownloadRequest {
   request_reason?: string;
   admin_notes?: string;
   user: User;
-  file: File;
+  file: BlogFile;
   created_at: string;
   updated_at: string;
 }
@@ -188,9 +188,9 @@ export interface SearchFiltersProps {
 }
 
 export interface FileUploadProps {
-  onFileUpload: (file: File) => void;
+  onFileUpload: (file: BlogFile) => void;
   onFileRemove: (fileId: number) => void;
-  files: File[];
+  files: BlogFile[];
   maxFiles?: number;
   maxSize?: number;
   acceptedTypes?: string[];

@@ -1,22 +1,22 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { 
-  User, 
-  Post, 
-  Category, 
-  Tag, 
-  File, 
+import axios, { AxiosInstance } from 'axios';
+import {
+  User,
+  Post,
+  Category,
+  Tag,
+  BlogFile,
   DownloadRequest,
-  ApiResponse, 
+  ApiResponse,
   PaginatedResponse,
-  PostQueryParams,
-  FileQueryParams,
-  DownloadRequestQueryParams,
   LoginForm,
   PostForm,
   CategoryForm,
   TagForm,
   FileForm,
-  DownloadRequestForm
+  DownloadRequestForm,
+  PostQueryParams,
+  FileQueryParams,
+  DownloadRequestQueryParams,
 } from '@/types';
 
 class ApiClient {
@@ -45,7 +45,7 @@ class ApiClient {
       }
     );
 
-    // Response interceptor to handle auth errors
+    // Response interceptor to handle auth errors and rate limiting
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -60,6 +60,21 @@ class ApiClient {
           // Only redirect if not on login page and not a login attempt
           if (typeof window !== 'undefined' && !isLoginPage && !isLoginAttempt) {
             window.location.href = '/admin/login';
+          }
+        } else if (error.response?.status === 429) {
+          // Handle rate limiting
+          console.warn('Rate limit exceeded. Please wait before making more requests.');
+          
+          // You could show a toast notification here
+          if (typeof window !== 'undefined') {
+            // Show user-friendly message
+            const event = new CustomEvent('show-toast', {
+              detail: {
+                type: 'error',
+                message: 'Too many requests. Please wait a moment before trying again.'
+              }
+            });
+            window.dispatchEvent(event);
           }
         }
         return Promise.reject(error);
@@ -84,13 +99,18 @@ class ApiClient {
   }
 
   // Posts endpoints
-  async getPosts(params?: PostQueryParams): Promise<ApiResponse<PaginatedResponse<Post>>> {
+  async getPosts(params?: PostQueryParams): Promise<{ posts: Post[], pagination: any }> {
     const response = await this.client.get('/posts', { params });
     return response.data;
   }
 
   async getPost(slug: string): Promise<ApiResponse<Post>> {
     const response = await this.client.get(`/posts/${slug}`);
+    return response.data;
+  }
+
+  async getPostById(id: string): Promise<{ post: Post }> {
+    const response = await this.client.get(`/posts/admin/${id}`);
     return response.data;
   }
 
@@ -115,7 +135,7 @@ class ApiClient {
   }
 
   // Categories endpoints
-  async getCategories(): Promise<ApiResponse<Category[]>> {
+  async getCategories(): Promise<{ categories: Category[] }> {
     const response = await this.client.get('/categories');
     return response.data;
   }
@@ -141,7 +161,7 @@ class ApiClient {
   }
 
   // Tags endpoints
-  async getTags(): Promise<ApiResponse<Tag[]>> {
+  async getTags(): Promise<{ tags: Tag[] }> {
     const response = await this.client.get('/tags');
     return response.data;
   }
@@ -167,17 +187,17 @@ class ApiClient {
   }
 
   // Files endpoints
-  async getFiles(params?: FileQueryParams): Promise<ApiResponse<PaginatedResponse<File>>> {
+  async getFiles(params?: FileQueryParams): Promise<{ files: BlogFile[], pagination: any }> {
     const response = await this.client.get('/files', { params });
     return response.data;
   }
 
-  async getFile(id: number): Promise<ApiResponse<File>> {
+  async getFile(id: number): Promise<ApiResponse<BlogFile>> {
     const response = await this.client.get(`/files/${id}`);
     return response.data;
   }
 
-  async uploadFile(file: File, data?: Partial<FileForm>): Promise<ApiResponse<File>> {
+  async uploadFile(file: File, data?: Partial<FileForm>): Promise<ApiResponse<BlogFile>> {
     const formData = new FormData();
     formData.append('file', file);
     if (data) {
@@ -185,7 +205,6 @@ class ApiClient {
         formData.append(key, data[key as keyof FileForm] as string);
       });
     }
-    
     const response = await this.client.post('/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -194,7 +213,7 @@ class ApiClient {
     return response.data;
   }
 
-  async updateFile(id: number, data: Partial<FileForm>): Promise<ApiResponse<File>> {
+  async updateFile(id: number, data: Partial<FileForm>): Promise<ApiResponse<BlogFile>> {
     const response = await this.client.put(`/files/${id}`, data);
     return response.data;
   }
@@ -212,7 +231,7 @@ class ApiClient {
   }
 
   // Download requests endpoints
-  async getDownloadRequests(params?: DownloadRequestQueryParams): Promise<ApiResponse<PaginatedResponse<DownloadRequest>>> {
+  async getDownloadRequests(params?: DownloadRequestQueryParams): Promise<{ requests: DownloadRequest[], pagination: any }> {
     const response = await this.client.get('/download-requests', { params });
     return response.data;
   }
@@ -238,17 +257,18 @@ class ApiClient {
   }
 
   // Dashboard endpoints
-  async getDashboardStats(): Promise<ApiResponse<{
+  async getDashboardStats(): Promise<{
     totalPosts: number;
     publishedPosts: number;
     draftPosts: number;
     totalCategories: number;
     totalTags: number;
     totalFiles: number;
+    totalRequests: number;
     pendingRequests: number;
     totalUsers: number;
-  }>> {
-    const response = await this.client.get('/dashboard/stats');
+  }> {
+    const response = await this.client.get('/posts/admin/stats');
     return response.data;
   }
 
