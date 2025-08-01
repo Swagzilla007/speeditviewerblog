@@ -11,6 +11,8 @@ lerna-debug.log*
 /out/
 .next/
 out/
+Frontend/.next/
+Frontend/out/
 
 # Production builds
 /build/
