@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 5000;
 
 // CORS configuration - must come before other middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -99,7 +99,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
-  console.log(`CORS enabled for: http://localhost:3000`);
+  console.log(`CORS enabled for: all origins (*)`);
 });
 
 module.exports = app; 
