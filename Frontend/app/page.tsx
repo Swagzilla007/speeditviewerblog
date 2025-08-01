@@ -92,27 +92,30 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <nav className="bg-blue-900 shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-primary-600">SpeedItViewer</h1>
+                <h1 className="text-2xl font-bold text-white flex items-center">
+                  <span className="text-2xl mr-2">&lt; /&gt;</span>
+                  SpeedItViewer
+                </h1>
               </div>
             </div>
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#home" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+              <a href="#home" className="text-white hover:text-orange-400 transition-colors font-medium">
                 Home
               </a>
-              <a href="#posts" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+              <a href="#posts" className="text-white hover:text-orange-400 transition-colors font-medium">
                 Posts
               </a>
-              <a href="#about" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+              <a href="#about" className="text-white hover:text-orange-400 transition-colors font-medium">
                 About
               </a>
-              <a href="#contact" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+              <a href="#contact" className="text-white hover:text-orange-400 transition-colors font-medium">
                 Contact
               </a>
             </div>
@@ -121,7 +124,7 @@ export default function HomePage() {
             <div className="md:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-gray-700 hover:text-primary-600"
+                className="text-white hover:text-orange-400"
               >
                 {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -130,18 +133,18 @@ export default function HomePage() {
 
           {/* Mobile Navigation */}
           {isMobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-gray-200">
+            <div className="md:hidden py-4 border-t border-blue-800">
               <div className="flex flex-col space-y-4">
-                <a href="#home" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+                <a href="#home" className="text-white hover:text-orange-400 transition-colors font-medium">
                   Home
                 </a>
-                <a href="#posts" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+                <a href="#posts" className="text-white hover:text-orange-400 transition-colors font-medium">
                   Posts
                 </a>
-                <a href="#about" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+                <a href="#about" className="text-white hover:text-orange-400 transition-colors font-medium">
                   About
                 </a>
-                <a href="#contact" className="text-gray-700 hover:text-primary-600 transition-colors font-medium">
+                <a href="#contact" className="text-white hover:text-orange-400 transition-colors font-medium">
                   Contact
                 </a>
               </div>
@@ -151,30 +154,61 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section id="home" className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
+      <section id="home" className="bg-gradient-to-br from-blue-900 via-blue-800 to-blue-950 text-white min-h-screen flex items-center">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
               Welcome to{' '}
               <span className="text-yellow-400">SpeedItViewer</span>
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-primary-100 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
               Discover the latest insights, tutorials, and stories from the world of technology and development.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <a
                 href="#posts"
-                className="btn bg-yellow-600 text-dark-900 hover:bg-yellow-700 px-8 py-3 text-lg font-semibold"
+                className="btn bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 text-lg font-semibold"
               >
                 Explore Posts
                 <ArrowRight className="ml-2 h-5 w-5" />
               </a>
               <a
                 href="#about"
-                className="btn border-2 border-white text-white hover:bg-white hover:text-primary-600 px-8 py-3 text-lg font-semibold"
+                className="btn border-2 border-white text-white hover:bg-white hover:text-blue-900 px-8 py-3 text-lg font-semibold"
               >
                 Learn More
               </a>
+            </div>
+            
+            {/* Feature Cards in Hero */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+              <div className="text-center">
+                <div className="bg-yellow-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <div className="text-xl font-bold text-blue-900">&lt; /&gt;</div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Code Support</h3>
+                <p className="text-blue-100 text-sm">
+                  Get help with your coding challenges and technical issues
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-yellow-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <div className="text-xl font-bold text-blue-900">↑</div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Code Sharing</h3>
+                <p className="text-blue-100 text-sm">
+                  Share your code snippets and solutions with the community
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-yellow-400 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <div className="text-xl font-bold text-blue-900">↓</div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Template Downloads</h3>
+                <p className="text-blue-100 text-sm">
+                  Access ready-to-use templates for your projects
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -202,8 +236,8 @@ export default function HomePage() {
               <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="h-8 w-8 text-yellow-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Growing</h3>
-              <p className="text-gray-600">Community</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">0</h3>
+              <p className="text-gray-600">Users</p>
             </div>
           </div>
         </div>
