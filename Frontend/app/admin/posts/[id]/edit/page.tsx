@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter, useParams } from 'next/navigation'
 import apiClient from '@/lib/api'
+import RichTextEditor from '@/app/components/RichTextEditor'
 import { 
   ArrowLeft, 
   Save, 
@@ -252,14 +253,15 @@ export default function EditPostPage() {
               <p className="text-gray-600">Update your blog post</p>
             </div>
           </div>
-          <button
-            onClick={handleSubmit}
-            disabled={updatePostMutation.isPending}
-            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {updatePostMutation.isPending ? 'Saving...' : 'Save Changes'}
-          </button>
+                     <button
+             type="button"
+             onClick={handleSubmit}
+             disabled={updatePostMutation.isPending}
+             className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+           >
+             <Save className="h-4 w-4 mr-2" />
+             {updatePostMutation.isPending ? 'Saving...' : 'Save Changes'}
+           </button>
         </div>
       </div>
 
@@ -301,13 +303,11 @@ export default function EditPostPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Content
               </label>
-              <textarea
+              <RichTextEditor
+                key={`editor-${postId}`}
                 value={formData.content}
-                onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                rows={15}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
                 placeholder="Write your post content..."
-                required
               />
             </div>
 
