@@ -219,7 +219,9 @@ router.get('/:slug', optionalAuth, async (req, res) => {
 // Create new post (admin only)
 router.post('/', authenticateToken, requireAdmin, createPostValidation, async (req, res) => {
   try {
+    console.log('Create post request body:', req.body);
     const { title, content, excerpt, featured_image, status, categories, tags } = req.body;
+    console.log('Extracted featured_image:', featured_image);
     const slug = createSlug(title);
 
     // Check if slug already exists
@@ -233,10 +235,11 @@ router.post('/', authenticateToken, requireAdmin, createPostValidation, async (r
     }
 
     // Create post
-    const [result] = await pool.execute(`
-      INSERT INTO posts (title, slug, content, excerpt, featured_image, status, author_id, published_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
+    console.log('Inserting post with featured_image:', featured_image);
+    console.log('Featured image type:', typeof featured_image);
+    console.log('Featured image length:', featured_image ? featured_image.length : 'null/undefined');
+    
+    const insertParams = [
       title, 
       slug, 
       content, 
@@ -245,7 +248,14 @@ router.post('/', authenticateToken, requireAdmin, createPostValidation, async (r
       status, 
       req.user.id,
       status === 'published' ? new Date() : null
-    ]);
+    ];
+    
+    console.log('Insert parameters:', insertParams);
+    
+    const [result] = await pool.execute(`
+      INSERT INTO posts (title, slug, content, excerpt, featured_image, status, author_id, published_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, insertParams);
 
     const postId = result.insertId;
 
@@ -302,8 +312,10 @@ router.post('/', authenticateToken, requireAdmin, createPostValidation, async (r
 // Update post (admin only)
 router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async (req, res) => {
   try {
+    console.log('Update post request body:', req.body);
     const { id } = req.params;
     const { title, content, excerpt, featured_image, status, categories, tags } = req.body;
+    console.log('Extracted featured_image for update:', featured_image);
 
     // Check if post exists
     const [existingPosts] = await pool.execute(
@@ -334,6 +346,7 @@ router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async 
     }
 
     // Update post
+    console.log('Updating post with featured_image:', featured_image || post.featured_image);
     await pool.execute(`
       UPDATE posts 
       SET title = ?, slug = ?, content = ?, excerpt = ?, featured_image = ?, 

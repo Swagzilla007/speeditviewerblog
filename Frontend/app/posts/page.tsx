@@ -255,12 +255,20 @@ export default function PostsPage() {
 }
 
 function PostCard({ post }: { post: Post }) {
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return null;
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    // Remove /api from the base URL since static files are served directly from the root
+    const cleanBaseURL = baseURL.endsWith('/api') ? baseURL.replace('/api', '') : baseURL;
+    return imageUrl.startsWith('http') ? imageUrl : `${cleanBaseURL}${imageUrl}`;
+  };
+
   return (
     <article className="card hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-      {post.featured_image && (
+      {getImageUrl(post.featured_image) && (
         <div className="aspect-video overflow-hidden rounded-t-lg">
           <img
-            src={post.featured_image}
+            src={getImageUrl(post.featured_image) || ''}
             alt={post.title}
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />

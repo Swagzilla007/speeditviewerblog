@@ -32,6 +32,8 @@ export default function NewPostPage() {
     tag_ids: [] as number[]
   })
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
+  const [featuredImage, setFeaturedImage] = useState<{ url: string; filename: string; original_name: string } | null>(null)
+  const [isUploadingFeaturedImage, setIsUploadingFeaturedImage] = useState(false)
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -58,6 +60,14 @@ export default function NewPostPage() {
     }
   })
 
+  const uploadFeaturedImageMutation = useMutation({
+    mutationFn: (file: File) => apiClient.uploadFeaturedImage(file),
+    onSuccess: (data) => {
+      setFeaturedImage(data.data)
+      setFormData(prev => ({ ...prev, featured_image: data.data.url }))
+    }
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -67,6 +77,9 @@ export default function NewPostPage() {
       tags: formData.tag_ids,
       file_ids: uploadedFiles.map(f => f.id)
     }
+
+    console.log('Submitting post data:', postData)
+    console.log('FormData featured_image:', formData.featured_image)
 
     try {
       await createPostMutation.mutateAsync(postData)
@@ -82,6 +95,23 @@ export default function NewPostPage() {
         uploadFileMutation.mutate(file)
       })
     }
+  }
+
+  const handleFeaturedImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setIsUploadingFeaturedImage(true)
+      uploadFeaturedImageMutation.mutate(file, {
+        onSettled: () => {
+          setIsUploadingFeaturedImage(false)
+        }
+      })
+    }
+  }
+
+  const removeFeaturedImage = () => {
+    setFeaturedImage(null)
+    setFormData(prev => ({ ...prev, featured_image: '' }))
   }
 
   const removeFile = (fileId: number) => {
@@ -185,15 +215,62 @@ export default function NewPostPage() {
             {/* Featured Image */}
             <div className="bg-white rounded-lg shadow p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Image URL
+                Featured Image
               </label>
-              <input
-                type="url"
-                value={formData.featured_image}
-                onChange={(e) => setFormData(prev => ({ ...prev, featured_image: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="https://example.com/image.jpg"
-              />
+              
+              {featuredImage ? (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={featuredImage.url}
+                      alt={featuredImage.original_name}
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeFeaturedImage}
+                      className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>File:</strong> {featuredImage.original_name}</p>
+                    <p><strong>URL:</strong> {featuredImage.url}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">
+                    Upload a featured image for this post
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFeaturedImageUpload}
+                    className="hidden"
+                    id="featured-image-upload"
+                    disabled={isUploadingFeaturedImage}
+                  />
+                  <label
+                    htmlFor="featured-image-upload"
+                    className={`inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer ${isUploadingFeaturedImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {isUploadingFeaturedImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image
+                      </>
+                    )}
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* File Upload */}

@@ -14,6 +14,12 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Ensure public storage directory exists for featured images
+const publicStorageDir = path.join(__dirname, '../public/storage');
+if (!fs.existsSync(publicStorageDir)) {
+  fs.mkdirSync(publicStorageDir, { recursive: true });
+}
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -24,6 +30,19 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+// Configure multer for featured image uploads (public storage)
+const featuredImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, publicStorageDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename for featured images
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'featured-' + uniqueSuffix + ext);
   }
 });
 
@@ -43,11 +62,32 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const imageFilter = (req, file, cb) => {
+  // Allow only image types for featured images
+  const allowedTypes = [
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'
+  ];
+
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only images are allowed for featured images.'), false);
+  }
+};
+
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
     fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 // 10MB default
+  }
+});
+
+const featuredImageUpload = multer({
+  storage: featuredImageStorage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB for featured images
   }
 });
 
@@ -91,6 +131,40 @@ router.post('/upload', authenticateToken, requireAdmin, upload.single('file'), f
     console.error('File upload error:', error);
     
     // Clean up uploaded file if database operation failed
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Upload featured image
+router.post('/featured-image', authenticateToken, requireAdmin, featuredImageUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    const file = req.file;
+    
+    // Generate public URL for the uploaded image
+    const publicUrl = `/storage/${file.filename}`;
+
+    res.status(201).json({
+      message: 'Featured image uploaded successfully',
+      data: {
+        filename: file.filename,
+        original_name: file.originalname,
+        url: publicUrl,
+        file_size: file.size,
+        mime_type: file.mimetype
+      }
+    });
+  } catch (error) {
+    console.error('Featured image upload error:', error);
+    
+    // Clean up uploaded file if operation failed
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }

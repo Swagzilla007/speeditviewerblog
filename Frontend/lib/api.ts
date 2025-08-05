@@ -213,6 +213,27 @@ class ApiClient {
     return response.data;
   }
 
+  async uploadFeaturedImage(file: File): Promise<ApiResponse<{ url: string; filename: string; original_name: string; file_size: number; mime_type: string }>> {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await this.client.post('/files/featured-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    // Construct the full URL for the uploaded image
+    // Remove /api from the base URL since static files are served directly from the root
+    let baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    if (baseURL.endsWith('/api')) {
+      baseURL = baseURL.replace('/api', '');
+    }
+    const imageData = response.data.data;
+    imageData.url = `${baseURL}${imageData.url}`;
+    
+    return response.data;
+  }
+
   async updateFile(id: number, data: Partial<FileForm>): Promise<ApiResponse<BlogFile>> {
     const response = await this.client.put(`/files/${id}`, data);
     return response.data;

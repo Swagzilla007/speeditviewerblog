@@ -35,6 +35,8 @@ export default function EditPostPage() {
     tag_ids: [] as number[]
   })
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
+  const [featuredImage, setFeaturedImage] = useState<{ url: string; filename: string; original_name: string } | null>(null)
+  const [isUploadingFeaturedImage, setIsUploadingFeaturedImage] = useState(false)
 
   const { data: post, isLoading: postLoading } = useQuery({
     queryKey: ['post', postId],
@@ -68,21 +70,50 @@ export default function EditPostPage() {
     }
   })
 
+  const uploadFeaturedImageMutation = useMutation({
+    mutationFn: (file: File) => apiClient.uploadFeaturedImage(file),
+    onSuccess: (data) => {
+      setFeaturedImage(data.data)
+      setFormData(prev => ({ ...prev, featured_image: data.data.url }))
+    }
+  })
+
   // Initialize form data when post is loaded
   useEffect(() => {
     if (post?.post) {
       const postData = post.post
+      // Ensure the featured image URL has the full backend URL
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const fullImageUrl = postData.featured_image && !postData.featured_image.startsWith('http') 
+        ? `${baseURL}${postData.featured_image}`
+        : postData.featured_image || '';
+      
       setFormData({
         title: postData.title || '',
         excerpt: postData.excerpt || '',
         content: postData.content || '',
-        featured_image: postData.featured_image || '',
+        featured_image: fullImageUrl,
         status: postData.status || 'draft',
         scheduled_at: postData.scheduled_at ? new Date(postData.scheduled_at).toISOString().slice(0, 16) : '',
         category_ids: postData.categories?.map((c: any) => c.id) || [],
         tag_ids: postData.tags?.map((t: any) => t.id) || []
       })
       setUploadedFiles(postData.files || [])
+      
+      // Initialize featured image if it exists
+      if (postData.featured_image) {
+        // Ensure the URL has the full backend URL
+        const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const fullImageUrl = postData.featured_image.startsWith('http') 
+          ? postData.featured_image 
+          : `${baseURL}${postData.featured_image}`;
+        
+        setFeaturedImage({
+          url: fullImageUrl,
+          filename: postData.featured_image.split('/').pop() || '',
+          original_name: postData.featured_image.split('/').pop() || ''
+        })
+      }
     }
   }, [post])
 
@@ -95,6 +126,9 @@ export default function EditPostPage() {
       tags: formData.tag_ids,
       file_ids: uploadedFiles.map(f => f.id)
     }
+
+    console.log('Submitting update post data:', postData)
+    console.log('FormData featured_image:', formData.featured_image)
 
     try {
       await updatePostMutation.mutateAsync(postData)
@@ -110,6 +144,23 @@ export default function EditPostPage() {
         uploadFileMutation.mutate(file)
       })
     }
+  }
+
+  const handleFeaturedImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setIsUploadingFeaturedImage(true)
+      uploadFeaturedImageMutation.mutate(file, {
+        onSettled: () => {
+          setIsUploadingFeaturedImage(false)
+        }
+      })
+    }
+  }
+
+  const removeFeaturedImage = () => {
+    setFeaturedImage(null)
+    setFormData(prev => ({ ...prev, featured_image: '' }))
   }
 
   const removeFile = (fileId: number) => {
@@ -263,15 +314,62 @@ export default function EditPostPage() {
             {/* Featured Image */}
             <div className="bg-white rounded-lg shadow p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Image URL
+                Featured Image
               </label>
-              <input
-                type="url"
-                value={formData.featured_image}
-                onChange={(e) => setFormData(prev => ({ ...prev, featured_image: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="https://example.com/image.jpg"
-              />
+              
+              {featuredImage ? (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={featuredImage.url}
+                      alt={featuredImage.original_name}
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeFeaturedImage}
+                      className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>File:</strong> {featuredImage.original_name}</p>
+                    <p><strong>URL:</strong> {featuredImage.url}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">
+                    Upload a featured image for this post
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFeaturedImageUpload}
+                    className="hidden"
+                    id="featured-image-upload"
+                    disabled={isUploadingFeaturedImage}
+                  />
+                  <label
+                    htmlFor="featured-image-upload"
+                    className={`inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer ${isUploadingFeaturedImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {isUploadingFeaturedImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose Image
+                      </>
+                    )}
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* File Upload */}

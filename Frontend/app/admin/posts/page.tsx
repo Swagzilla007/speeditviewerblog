@@ -107,6 +107,14 @@ export default function PostsPage() {
     }
   }
 
+  const getImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) return null;
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    // Remove /api from the base URL since static files are served directly from the root
+    const cleanBaseURL = baseURL.endsWith('/api') ? baseURL.replace('/api', '') : baseURL;
+    return imageUrl.startsWith('http') ? imageUrl : `${cleanBaseURL}${imageUrl}`;
+  }
+
   const posts = postsData?.posts || []
   const pagination = postsData?.pagination || { total: 0, totalPages: 0, page: 1, from: 0, to: 0 }
 
@@ -222,10 +230,10 @@ export default function PostsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            {post.featured_image ? (
+                            {getImageUrl(post.featured_image) ? (
                               <img
                                 className="h-10 w-10 rounded-lg object-cover"
-                                src={post.featured_image}
+                                src={getImageUrl(post.featured_image) || ''}
                                 alt={post.title}
                               />
                             ) : (
