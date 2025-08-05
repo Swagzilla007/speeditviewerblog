@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('../config/database');
 const { authenticateToken, requireAdmin, optionalAuth } = require('../middleware/auth');
 const { createPostValidation, updatePostValidation, paginationValidation } = require('../middleware/validation');
@@ -522,14 +524,38 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if post exists
+    // Check if post exists and get featured image info
     const [posts] = await pool.execute(
-      'SELECT id FROM posts WHERE id = ?',
+      'SELECT id, featured_image FROM posts WHERE id = ?',
       [id]
     );
 
     if (posts.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const post = posts[0];
+
+    // Delete featured image file from storage if it exists
+    if (post.featured_image) {
+      try {
+        // Extract filename from the URL
+        const urlParts = post.featured_image.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        
+        if (filename) {
+          const filePath = path.join(__dirname, '../public/storage', filename);
+          
+          // Check if file exists and delete it
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`Deleted featured image file: ${filename}`);
+          }
+        }
+      } catch (fileError) {
+        console.error('Error deleting featured image file:', fileError);
+        // Don't fail the entire operation if file deletion fails
+      }
     }
 
     // Delete post (cascading will handle related records)
