@@ -18,11 +18,25 @@ const createSlug = (title) => {
 // Get all posts (public - with optional auth for additional features)
 router.get('/', optionalAuth, paginationValidation, async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, category, tag, status = 'published' } = req.query;
+    const { page = 1, limit = 10, search, category, tag, status } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereConditions = ['p.status = ?'];
-    let params = [status];
+    let whereConditions = [];
+    let params = [];
+
+    // Handle status filtering
+    if (status) {
+      // If status is provided, filter by it
+      whereConditions.push('p.status = ?');
+      params.push(status);
+    } else if (req.user && req.user.role === 'admin') {
+      // If no status provided and user is admin, show all posts
+      // No status condition added
+    } else {
+      // If no status provided and user is not admin, default to published
+      whereConditions.push('p.status = ?');
+      params.push('published');
+    }
 
     // Add search condition
     if (search) {
@@ -43,7 +57,7 @@ router.get('/', optionalAuth, paginationValidation, async (req, res) => {
       params.push(tag);
     }
 
-    const whereClause = whereConditions.join(' AND ');
+    const whereClause = whereConditions.length > 0 ? whereConditions.join(' AND ') : '1=1';
 
     // Get posts with author, categories, and tags
     const [posts] = await pool.execute(`

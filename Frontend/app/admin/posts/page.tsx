@@ -156,7 +156,20 @@ export default function PostsPage() {
               <Filter className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-600">
                 {postsData?.pagination?.total || 0} posts
+                {statusFilter && (
+                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                    Filter: {statusFilter}
+                  </span>
+                )}
               </span>
+              {statusFilter && (
+                <button
+                  onClick={() => setStatusFilter('')}
+                  className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                >
+                  Clear Filter
+                </button>
+              )}
             </div>
           </div>
         </div>
