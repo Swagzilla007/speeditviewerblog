@@ -15,7 +15,11 @@ import {
   AlignCenter, 
   AlignRight, 
   AlignJustify,
-  Palette
+  Palette,
+  Type,
+  Heading1,
+  Heading2,
+  Heading3
 } from 'lucide-react'
 
 interface RichTextEditorProps {
@@ -31,39 +35,78 @@ const MenuBar = ({ editor }: { editor: any }) => {
 
   return (
     <div className="border-b border-gray-200 p-2 bg-gray-50 rounded-t-lg">
-      <div className="flex items-center space-x-1">
-        {/* Text Formatting */}
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          disabled={!editor.can().chain().focus().toggleBold().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''}`}
-          title="Bold"
-        >
-          <Bold className="h-4 w-4" />
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          disabled={!editor.can().chain().focus().toggleItalic().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''}`}
-          title="Italic"
-        >
-          <Italic className="h-4 w-4" />
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          disabled={!editor.can().chain().focus().toggleUnderline().run()}
-          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-300' : ''}`}
-          title="Underline"
-        >
-          <UnderlineIcon className="h-4 w-4" />
-        </button>
+             <div className="flex items-center space-x-1">
+         {/* Text Size/Heading */}
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().setParagraph().run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('paragraph') ? 'bg-gray-300' : ''}`}
+           title="Paragraph"
+         >
+           <Type className="h-4 w-4" />
+         </button>
+         
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-300' : ''}`}
+           title="Heading 1"
+         >
+           <Heading1 className="h-4 w-4" />
+         </button>
+         
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-300' : ''}`}
+           title="Heading 2"
+         >
+           <Heading2 className="h-4 w-4" />
+         </button>
+         
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-300' : ''}`}
+           title="Heading 3"
+         >
+           <Heading3 className="h-4 w-4" />
+         </button>
 
-        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+         <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+         {/* Text Formatting */}
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().toggleBold().run()}
+           disabled={!editor.can().chain().focus().toggleBold().run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''}`}
+           title="Bold"
+         >
+           <Bold className="h-4 w-4" />
+         </button>
+         
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().toggleItalic().run()}
+           disabled={!editor.can().chain().focus().toggleItalic().run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''}`}
+           title="Italic"
+         >
+           <Italic className="h-4 w-4" />
+         </button>
+         
+         <button
+           type="button"
+           onClick={() => editor.chain().focus().toggleUnderline().run()}
+           disabled={!editor.can().chain().focus().toggleUnderline().run()}
+           className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-300' : ''}`}
+           title="Underline"
+         >
+           <UnderlineIcon className="h-4 w-4" />
+         </button>
+
+         <div className="w-px h-6 bg-gray-300 mx-2"></div>
 
         {/* Text Alignment */}
         <button
