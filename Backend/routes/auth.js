@@ -228,4 +228,22 @@ router.put('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
+// Get total user count (public endpoint)
+router.get('/users/count', async (req, res) => {
+  try {
+    const [usersCount] = await pool.execute('SELECT COUNT(*) as total FROM users');
+    
+    res.json({
+      success: true,
+      data: {
+        totalUsers: usersCount[0].total
+      },
+      message: 'User count retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Get user count error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router; 

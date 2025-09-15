@@ -14,7 +14,11 @@ import {
   File,
   Eye,
   EyeOff,
-  Filter
+  Filter,
+  Code,
+  Database,
+  Terminal,
+  FileCode
 } from 'lucide-react'
 
 export default function FilesPage() {
@@ -116,10 +120,56 @@ export default function FilesPage() {
     setShowForm(false)
   }
 
-  const getFileIcon = (mimeType: string) => {
+  const getFileIcon = (mimeType: string, fileName?: string) => {
+    // Determine file extension from fileName if available
+    const ext = fileName ? fileName.split('.').pop()?.toLowerCase() : '';
+
+    // Image files
     if (mimeType.startsWith('image/')) {
       return <Image className="h-5 w-5 text-blue-600" />
     }
+    
+    // Programming files by extension
+    if (ext) {
+      // Web development
+      if (['html', 'htm'].includes(ext)) {
+        return <Code className="h-5 w-5 text-orange-500" />
+      }
+      if (['css'].includes(ext)) {
+        return <Code className="h-5 w-5 text-blue-500" />
+      }
+      if (['js', 'jsx', 'ts', 'tsx'].includes(ext)) {
+        return <Code className="h-5 w-5 text-yellow-500" />
+      }
+      
+      // Data formats
+      if (['json', 'xml', 'yml', 'yaml'].includes(ext)) {
+        return <Code className="h-5 w-5 text-green-500" />
+      }
+      
+      // Backend/programming languages
+      if (['sql'].includes(ext)) {
+        return <Database className="h-5 w-5 text-blue-700" />
+      }
+      if (['java', 'py', 'rb', 'php', 'c', 'cpp', 'cs', 'go'].includes(ext)) {
+        return <Code className="h-5 w-5 text-purple-600" />
+      }
+      
+      // Scripts
+      if (['sh', 'bat', 'ps1'].includes(ext)) {
+        return <Terminal className="h-5 w-5 text-gray-800" />
+      }
+    }
+    
+    // Text-based code files by MIME type
+    if (mimeType.startsWith('text/') || 
+        mimeType.includes('javascript') || 
+        mimeType.includes('json') || 
+        mimeType.includes('xml')) {
+      return <FileText className="h-5 w-5 text-indigo-600" />
+    }
+    
+    // Default file icon
     return <File className="h-5 w-5 text-gray-600" />
   }
 
@@ -142,14 +192,18 @@ export default function FilesPage() {
             <h1 className="text-2xl font-bold text-gray-900">Files</h1>
             <p className="text-gray-600">Manage downloadable files uploaded to your blog</p>
             <div className="mt-2 text-sm text-gray-500">
-              <p>This page displays only attached files (not featured images).</p>
+              <p>This page displays attached files for download by your visitors.</p>
               <p className="mt-1">Files can only be uploaded through posts when creating or editing content.</p>
             </div>
           </div>
           <div className="flex flex-col space-y-2">
             <div className="inline-flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg">
               <FileText className="h-4 w-4 mr-2" />
-              Attached Files: Downloadable content for your visitors
+              Documents, PDFs, Archives
+            </div>
+            <div className="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg">
+              <FileCode className="h-4 w-4 mr-2" />
+              Programming Files: SQL, HTML, Java, JavaScript, etc.
             </div>
           </div>
         </div>
@@ -204,8 +258,39 @@ export default function FilesPage() {
                 <div>
                   <p className="text-sm text-gray-500">File Type</p>
                   <p className="font-medium">
-                    {editingFile.mime_type.split('/')[0].charAt(0).toUpperCase() + 
-                     editingFile.mime_type.split('/')[0].slice(1)} Document
+                    {(() => {
+                      // Get file extension
+                      const ext = editingFile.original_name ? 
+                                  editingFile.original_name.split('.').pop()?.toLowerCase() : '';
+                      
+                      // Programming files
+                      if (['html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx'].includes(ext || '')) {
+                        return 'Web Programming File';
+                      } else if (['json', 'xml', 'yml', 'yaml'].includes(ext || '')) {
+                        return 'Data Format File';
+                      } else if (['sql'].includes(ext || '')) {
+                        return 'SQL Database File';
+                      } else if (['java', 'py', 'rb', 'php', 'c', 'cpp', 'cs', 'go'].includes(ext || '')) {
+                        return 'Programming Source File';
+                      } else if (['sh', 'bat', 'ps1'].includes(ext || '')) {
+                        return 'Script File';
+                      } else if (editingFile.mime_type.startsWith('image/')) {
+                        return 'Image File';
+                      } else if (editingFile.mime_type.includes('pdf')) {
+                        return 'PDF Document';
+                      } else if (editingFile.mime_type.includes('word') || 
+                                editingFile.mime_type.includes('document')) {
+                        return 'Word Document';
+                      } else if (editingFile.mime_type.includes('excel') || 
+                                editingFile.mime_type.includes('sheet')) {
+                        return 'Spreadsheet';
+                      } else if (editingFile.mime_type.startsWith('text/')) {
+                        return 'Text Document';
+                      }
+                      
+                      // Default
+                      return 'Document';
+                    })()}
                   </p>
                 </div>
                 <div>
@@ -342,7 +427,7 @@ export default function FilesPage() {
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 bg-green-50 rounded-lg flex items-center justify-center">
-                              {getFileIcon(file.mime_type)}
+                              {getFileIcon(file.mime_type, file.original_name)}
                             </div>
                           </div>
                           <div className="ml-4">

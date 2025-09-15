@@ -49,16 +49,37 @@ const featuredImageStorage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   // Allow common file types
   const allowedTypes = [
+    // Images
     'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+    // Documents
     'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed'
+    // Text and code files
+    'text/plain', 'text/csv', 'application/zip', 'application/x-rar-compressed',
+    // Programming files
+    'text/html', 'text/css', 'application/javascript', 'text/javascript',
+    'application/json', 'application/xml', 'text/xml', 'text/markdown',
+    'application/sql', 'application/x-sql', 'text/x-sql',
+    'text/x-java-source', 'text/x-python', 'text/x-c', 'text/x-c++',
+    'text/x-php', 'text/x-ruby', 'text/x-typescript',
+    'application/x-httpd-php', 'application/x-sh'
   ];
 
-  if (allowedTypes.includes(file.mimetype)) {
+  // Also check file extension for programming files that might not have proper MIME types
+  const allowedExtensions = [
+    '.html', '.htm', '.css', '.js', '.jsx', '.ts', '.tsx',
+    '.json', '.xml', '.md', '.markdown',
+    '.sql', '.java', '.py', '.c', '.cpp', '.h', '.cs',
+    '.php', '.rb', '.go', '.sh', '.bat', '.ps1',
+    '.yml', '.yaml', '.toml', '.ini', '.conf'
+  ];
+
+  const ext = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images, documents, and archives are allowed.'), false);
+    cb(new Error('Invalid file type. Allowed files: images, documents, programming files (HTML, CSS, JavaScript, SQL, Java, Python, etc.), and archives.'), false);
   }
 };
 

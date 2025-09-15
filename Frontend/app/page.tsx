@@ -52,6 +52,12 @@ export default function HomePage() {
     queryKey: ['categories'],
     queryFn: () => apiClient.getCategories()
   })
+  
+  // Fetch user count
+  const { data: userCount = 0 } = useQuery({
+    queryKey: ['userCount'],
+    queryFn: () => apiClient.getUserCount()
+  })
 
   const posts = postsData?.posts || []
   const categories = categoriesData?.categories || []
@@ -144,7 +150,7 @@ export default function HomePage() {
                <div className="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                  <Users className="h-8 w-8 text-yellow-600" />
                </div>
-               <h3 className="text-2xl font-bold text-gray-900 mb-2">0</h3>
+               <h3 className="text-2xl font-bold text-gray-900 mb-2">{userCount}+</h3>
                <p className="text-gray-600">Users</p>
              </div>
            </div>

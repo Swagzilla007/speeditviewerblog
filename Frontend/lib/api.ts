@@ -332,6 +332,12 @@ class ApiClient {
     return response.data;
   }
 
+  // Public stats endpoints
+  async getUserCount(): Promise<number> {
+    const response = await this.client.get('/auth/users/count');
+    return response.data.data.totalUsers;
+  }
+
   // Utility methods
   setAuthToken(token: string) {
     localStorage.setItem('auth_token', token);
