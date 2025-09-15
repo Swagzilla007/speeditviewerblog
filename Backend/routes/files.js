@@ -176,7 +176,7 @@ router.post('/featured-image', authenticateToken, requireAdmin, featuredImageUpl
 // Get all files (admin only)
 router.get('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 20, postId } = req.query;
+    const { page = 1, limit = 20, postId, fileType, is_public, search } = req.query;
     const offset = (page - 1) * limit;
 
     let whereClause = '1=1';
@@ -185,6 +185,28 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     if (postId) {
       whereClause += ' AND f.post_id = ?';
       params.push(postId);
+    }
+    
+    // Filter by file type (featured image vs attached file)
+    if (fileType === 'featured') {
+      whereClause += ' AND f.filename LIKE ?';
+      params.push('featured-%');
+    } else if (fileType === 'attached') {
+      whereClause += ' AND f.filename NOT LIKE ?';
+      params.push('featured-%');
+    }
+    
+    // Filter by public/private status
+    if (is_public !== undefined) {
+      whereClause += ' AND f.is_public = ?';
+      params.push(is_public === 'true');
+    }
+    
+    // Filter by search term
+    if (search) {
+      whereClause += ' AND (f.original_name LIKE ? OR f.description LIKE ? OR p.title LIKE ?)';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
     }
 
     // Get files with uploader info

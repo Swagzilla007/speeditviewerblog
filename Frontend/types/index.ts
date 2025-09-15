@@ -162,6 +162,7 @@ export interface FileQueryParams {
   search?: string;
   post_id?: number;
   is_public?: boolean;
+  fileType?: 'attached' | 'featured' | string;
 }
 
 export interface DownloadRequestQueryParams {

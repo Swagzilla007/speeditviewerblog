@@ -29,13 +29,21 @@ export default function FilesPage() {
     is_public: true
   })
 
+  // Always filter to show only attached files (not featured images)
   const { data: filesData, isLoading } = useQuery({
-    queryKey: ['files', { search: searchQuery, is_public: publicFilter, page: currentPage }],
+    queryKey: ['files', { 
+      search: searchQuery, 
+      is_public: publicFilter, 
+      page: currentPage,
+      fileType: 'attached'  // Always filter for attached files
+    }],
     queryFn: () => apiClient.getFiles({
       search: searchQuery || undefined,
       is_public: publicFilter === '' ? undefined : publicFilter === 'true',
       page: currentPage,
-      limit: 10
+      limit: 10,
+      // Only show attached files (not featured images)
+      fileType: 'attached'
     })
   })
 
@@ -132,13 +140,16 @@ export default function FilesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Files</h1>
-            <p className="text-gray-600">Manage your uploaded files</p>
+            <p className="text-gray-600">Manage downloadable files uploaded to your blog</p>
+            <div className="mt-2 text-sm text-gray-500">
+              <p>This page displays only attached files (not featured images).</p>
+              <p className="mt-1">Files can only be uploaded through posts when creating or editing content.</p>
+            </div>
           </div>
-          {/* Upload button removed - files should be uploaded through posts */}
-          <div className="flex space-x-3">
-            <div className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
+          <div className="flex flex-col space-y-2">
+            <div className="inline-flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg">
               <FileText className="h-4 w-4 mr-2" />
-              Files are attached to posts
+              Attached Files: Downloadable content for your visitors
             </div>
           </div>
         </div>
@@ -158,15 +169,17 @@ export default function FilesPage() {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
-            <select
-              value={publicFilter}
-              onChange={(e) => setPublicFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="">All Files</option>
-              <option value="true">Public Files</option>
-              <option value="false">Private Files</option>
-            </select>
+            <div className="flex">
+              <select
+                value={publicFilter}
+                onChange={(e) => setPublicFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full"
+              >
+                <option value="">All Visibility</option>
+                <option value="true">Public Files</option>
+                <option value="false">Private Files</option>
+              </select>
+            </div>
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-600">
@@ -184,6 +197,50 @@ export default function FilesPage() {
             <h2 className="text-lg font-medium text-gray-900 mb-4">
               Edit File: {editingFile.original_name}
             </h2>
+            
+            {/* File information */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">File Type</p>
+                  <p className="font-medium">
+                    {editingFile.mime_type.split('/')[0].charAt(0).toUpperCase() + 
+                     editingFile.mime_type.split('/')[0].slice(1)} Document
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Size</p>
+                  <p className="font-medium">{formatFileSize(editingFile.file_size)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Downloads</p>
+                  <p className="font-medium">{editingFile.download_count}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Upload Date</p>
+                  <p className="font-medium">{new Date(editingFile.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              {/* Associated post information */}
+              <div className="mt-4 border-t pt-4">
+                <p className="text-sm text-gray-500">Associated Post</p>
+                {editingFile.post_title ? (
+                  <div className="mt-2">
+                    <a 
+                      href={`/admin/posts/${editingFile.post_id}/edit`}
+                      className="inline-flex items-center text-blue-600 hover:underline"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {editingFile.post_title}
+                    </a>
+                  </div>
+                ) : (
+                  <p className="italic text-gray-500">No associated post</p>
+                )}
+              </div>
+            </div>
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -207,6 +264,11 @@ export default function FilesPage() {
                   />
                   <span className="text-sm font-medium text-gray-700">Public file</span>
                 </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.is_public 
+                    ? 'Public files can be downloaded by anyone without approval' 
+                    : 'Private files require approval for each download request'}
+                </p>
               </div>
               <div className="flex space-x-3">
                 <button
@@ -257,6 +319,9 @@ export default function FilesPage() {
                       Size
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Associated Post
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Downloads
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -276,13 +341,15 @@ export default function FilesPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <div className="h-10 w-10 bg-green-50 rounded-lg flex items-center justify-center">
                               {getFileIcon(file.mime_type)}
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {file.original_name}
+                            <div className="flex items-center">
+                              <span className="text-sm font-medium text-gray-900">
+                                {file.original_name}
+                              </span>
                             </div>
                             {file.description && (
                               <div className="text-sm text-gray-500 truncate max-w-xs">
@@ -294,6 +361,20 @@ export default function FilesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatFileSize(file.file_size)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {file.post_title ? (
+                          <a 
+                            href={`/admin/posts/${file.post_id}/edit`}
+                            className="text-blue-600 hover:text-blue-900 hover:underline flex items-center"
+                            title="Edit associated post"
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            {file.post_title}
+                          </a>
+                        ) : (
+                          <span className="text-gray-500 italic">No post</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
