@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Menu, X, User, LogOut } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import apiClient from '@/lib/api'
 
 interface NavigationProps {
   currentPage?: 'home' | 'posts' | 'about' | 'contact'
@@ -10,8 +12,29 @@ interface NavigationProps {
 
 export default function Navigation({ currentPage = 'home' }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [isClient, setIsClient] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    setIsClient(true)
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (e) {
+        console.error('Failed to parse user from localStorage')
+      }
+    }
+  }, [])
 
   const isActive = (page: string) => currentPage === page
+  
+  const handleLogout = () => {
+    apiClient.removeAuthToken()
+    setUser(null)
+    router.push('/')
+  }
 
   return (
     <nav className="bg-blue-900 shadow-sm border-b sticky top-0 z-50">
@@ -68,6 +91,36 @@ export default function Navigation({ currentPage = 'home' }: NavigationProps) {
             >
               Contact
             </Link>
+            
+            {/* Auth Links - Only show on client side to avoid hydration errors */}
+            {isClient && (
+              <>
+                {user ? (
+                  <div className="flex items-center space-x-4">
+                    <span className="text-white font-medium">{user.username || user.email}</span>
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center text-white hover:text-orange-400"
+                    >
+                      <LogOut className="h-4 w-4 mr-1" />
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <Link href="/login" className="text-white hover:text-orange-400">
+                      Login
+                    </Link>
+                    <Link 
+                      href="/register"
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                    >
+                      Register
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -125,6 +178,41 @@ export default function Navigation({ currentPage = 'home' }: NavigationProps) {
               >
                 Contact
               </Link>
+              
+              {/* Mobile Auth Links */}
+              {isClient && (
+                <div className="pt-4 border-t border-blue-800">
+                  {user ? (
+                    <>
+                      <div className="text-white font-medium mb-2">
+                        {user.username || user.email}
+                      </div>
+                      <button 
+                        onClick={handleLogout}
+                        className="flex items-center text-white hover:text-orange-400"
+                      >
+                        <LogOut className="h-4 w-4 mr-1" />
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col space-y-2">
+                      <Link 
+                        href="/login" 
+                        className="text-white hover:text-orange-400"
+                      >
+                        Login
+                      </Link>
+                      <Link 
+                        href="/register"
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm transition-colors inline-block w-fit"
+                      >
+                        Register
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

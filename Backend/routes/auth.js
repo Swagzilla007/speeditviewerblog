@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
-const { loginValidation } = require('../middleware/validation');
+const { loginValidation, registerValidation } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -70,7 +70,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 });
 
 // Create new admin user (admin only)
-router.post('/register', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/admin-register', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { username, email, password, role = 'user' } = req.body;
 
@@ -111,6 +111,69 @@ router.post('/register', authenticateToken, requireAdmin, async (req, res) => {
     res.status(201).json({
       message: 'User created successfully',
       user: newUsers[0]
+    });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Public user registration
+router.post('/register', registerValidation, async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Use email as username if not provided
+    const finalUsername = username || email.split('@')[0];
+
+    // Check if user already exists
+    const [existingUsers] = await pool.execute(
+      'SELECT id FROM users WHERE email = ? OR username = ?',
+      [email, finalUsername]
+    );
+
+    if (existingUsers.length > 0) {
+      return res.status(400).json({ error: 'Email or username already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create user with 'user' role
+    const [result] = await pool.execute(
+      'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, "user")',
+      [finalUsername, email, hashedPassword]
+    );
+
+    // Get created user
+    const [newUsers] = await pool.execute(
+      'SELECT id, username, email, role, created_at FROM users WHERE id = ?',
+      [result.insertId]
+    );
+
+    // Generate JWT token for automatic login
+    const token = jwt.sign(
+      { userId: newUsers[0].id, username: newUsers[0].username, role: newUsers[0].role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      data: {
+        user: newUsers[0],
+        token
+      }
     });
   } catch (error) {
     console.error('Register error:', error);

@@ -94,7 +94,7 @@ export default function AdminLayout({
     { name: 'Categories', href: '/admin/categories', icon: FolderOpen },
     { name: 'Tags', href: '/admin/tags', icon: Tag },
     { name: 'Files', href: '/admin/files', icon: FolderDown },
-    { name: 'Download Requests', href: '/admin/requests', icon: Download },
+    { name: 'Download Requests', href: '/admin/download-requests', icon: Download },
   ]
 
   return (

@@ -15,6 +15,7 @@ import {
   Clock
 } from 'lucide-react'
 import Link from 'next/link'
+import PostFiles from '@/app/components/PostFiles'
 
 export default function PostDetailPage() {
   const params = useParams()
@@ -178,6 +179,11 @@ export default function PostDetailPage() {
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
         </div>
+        
+        {/* Downloadable Files */}
+        {post.files && post.files.length > 0 && (
+          <PostFiles files={post.files} postId={post.id} />
+        )}
 
         {/* Author Bio */}
         <div className="bg-gray-100 rounded-lg p-6 mb-8">

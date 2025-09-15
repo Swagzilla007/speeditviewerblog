@@ -9,6 +9,7 @@ import {
   ApiResponse,
   PaginatedResponse,
   LoginForm,
+  RegisterForm,
   PostForm,
   CategoryForm,
   TagForm,
@@ -85,6 +86,11 @@ class ApiClient {
   // Auth endpoints
   async login(credentials: LoginForm): Promise<ApiResponse<{ user: User; token: string }>> {
     const response = await this.client.post('/auth/login', credentials);
+    return response.data;
+  }
+
+  async register(data: RegisterForm): Promise<ApiResponse<{ user: User; token: string }>> {
+    const response = await this.client.post('/auth/register', data);
     return response.data;
   }
 
@@ -197,9 +203,15 @@ class ApiClient {
     return response.data;
   }
 
-  async uploadFile(file: File, data?: Partial<FileForm>): Promise<ApiResponse<BlogFile>> {
+  async uploadFile(file: File, postId?: number, data?: Partial<FileForm>): Promise<ApiResponse<BlogFile>> {
     const formData = new FormData();
     formData.append('file', file);
+    
+    // Add postId to form data if provided
+    if (postId) {
+      formData.append('postId', postId.toString());
+    }
+    
     if (data) {
       Object.keys(data).forEach(key => {
         formData.append(key, data[key as keyof FileForm] as string);
@@ -210,6 +222,10 @@ class ApiClient {
         'Content-Type': 'multipart/form-data',
       },
     });
+    // Adjust data structure to match what's expected in the frontend
+    if (response.data.file && !response.data.data) {
+      response.data.data = response.data.file;
+    }
     return response.data;
   }
 
@@ -263,17 +279,32 @@ class ApiClient {
   }
 
   async createDownloadRequest(data: DownloadRequestForm & { file_id: number }): Promise<ApiResponse<DownloadRequest>> {
-    const response = await this.client.post('/download-requests', data);
+    // Convert file_id to fileId as expected by the backend
+    const formattedData = {
+      fileId: data.file_id,
+      notes: data.notes || null // Ensure notes is null, not undefined
+    };
+    const response = await this.client.post('/download-requests', formattedData);
     return response.data;
   }
 
-  async updateDownloadRequest(id: number, data: { status: 'approved' | 'denied'; admin_notes?: string }): Promise<ApiResponse<DownloadRequest>> {
-    const response = await this.client.put(`/download-requests/${id}`, data);
+  async updateDownloadRequest(id: number, data: { status: 'approved' | 'rejected'; admin_notes?: string }): Promise<ApiResponse<DownloadRequest>> {
+    // Convert admin_notes to notes as expected by the backend
+    const formattedData = {
+      status: data.status,
+      notes: data.admin_notes || null // Ensure notes is null, not undefined
+    };
+    const response = await this.client.put(`/download-requests/${id}`, formattedData);
     return response.data;
   }
 
   async deleteDownloadRequest(id: number): Promise<ApiResponse<{ message: string }>> {
     const response = await this.client.delete(`/download-requests/${id}`);
+    return response.data;
+  }
+  
+  async checkDownloadRequest(fileId: number): Promise<{ requested: boolean; status: string | null; requestId?: number }> {
+    const response = await this.client.get(`/download-requests/check/${fileId}`);
     return response.data;
   }
 

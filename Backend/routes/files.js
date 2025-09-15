@@ -279,19 +279,34 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'File not found on server' });
     }
 
-    // Check access permissions
-    if (file.post_id) {
-      // File is attached to a post
-      if (file.post_status !== 'published' && req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Access denied. Post is not published.' });
-      }
-    } else {
-      // File is not attached to any post - admin only
-      if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Access denied. Admin only.' });
-      }
+    // Admins always have access
+    if (req.user.role === 'admin') {
+      // Set headers for download
+      res.setHeader('Content-Type', file.mime_type);
+      res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+      res.setHeader('Content-Length', file.file_size);
+      return fs.createReadStream(file.file_path).pipe(res);
     }
-
+    
+    // Check if user has an approved download request for this file
+    const [approvedRequests] = await pool.execute(`
+      SELECT id FROM download_requests 
+      WHERE user_id = ? AND file_id = ? AND status = 'approved'
+    `, [req.user.id, id]);
+    
+    if (approvedRequests.length === 0) {
+      return res.status(403).json({ 
+        error: 'Access denied. You need an approved download request for this file.',
+        needsRequest: true 
+      });
+    }
+    
+    // Increment download count
+    await pool.execute(`
+      UPDATE files SET download_count = download_count + 1 
+      WHERE id = ?
+    `, [id]);
+    
     // Set headers for download
     res.setHeader('Content-Type', file.mime_type);
     res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);

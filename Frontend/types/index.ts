@@ -68,13 +68,19 @@ export interface DownloadRequest {
   id: number;
   user_id: number;
   file_id: number;
-  status: 'pending' | 'approved' | 'denied';
-  request_reason?: string;
-  admin_notes?: string;
-  user: User;
-  file: BlogFile;
-  created_at: string;
-  updated_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  request_date: string;
+  approved_date?: string;
+  approved_by?: number;
+  user?: User;
+  file?: BlogFile;
+  // Additional fields from joins
+  file_name?: string;
+  requester_name?: string;
+  approver_name?: string;
+  post_title?: string;
+  post_slug?: string;
 }
 
 // API Response Types
@@ -98,6 +104,11 @@ export interface PaginatedResponse<T> {
 }
 
 // Form Types
+export interface RegisterForm {
+  email: string;
+  password: string;
+  username?: string;
+}
 export interface LoginForm {
   email: string;
   password: string;
@@ -125,11 +136,13 @@ export interface TagForm {
 
 export interface FileForm {
   description?: string;
-  is_public: boolean;
+  is_public?: boolean;
+  postId?: number | string;
 }
 
 export interface DownloadRequestForm {
-  request_reason?: string;
+  file_id: number;
+  notes?: string;
 }
 
 // Query Parameters

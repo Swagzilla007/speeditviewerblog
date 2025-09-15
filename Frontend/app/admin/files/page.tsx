@@ -9,7 +9,6 @@ import {
   Edit, 
   Trash2, 
   Download,
-  Upload,
   FileText,
   Image,
   File,
@@ -40,12 +39,7 @@ export default function FilesPage() {
     })
   })
 
-  const uploadFileMutation = useMutation({
-    mutationFn: (file: File) => apiClient.uploadFile(file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['files'] })
-    }
-  })
+  // Removed standalone file upload functionality as files should be uploaded through posts
 
   const updateFileMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => apiClient.updateFile(id, data),
@@ -63,14 +57,7 @@ export default function FilesPage() {
     }
   })
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files) {
-      Array.from(files).forEach(file => {
-        uploadFileMutation.mutate(file)
-      })
-    }
-  }
+  // Removed handleFileUpload as files should be uploaded through posts
 
   const handleEdit = (file: any) => {
     setEditingFile(file)
@@ -147,21 +134,12 @@ export default function FilesPage() {
             <h1 className="text-2xl font-bold text-gray-900">Files</h1>
             <p className="text-gray-600">Manage your uploaded files</p>
           </div>
+          {/* Upload button removed - files should be uploaded through posts */}
           <div className="flex space-x-3">
-            <input
-              type="file"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Files
-            </label>
+            <div className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
+              <FileText className="h-4 w-4 mr-2" />
+              Files are attached to posts
+            </div>
           </div>
         </div>
       </div>

@@ -171,6 +171,14 @@ router.get('/:slug', optionalAuth, async (req, res) => {
       WHERE pt.post_id = ?
     `, [post.id]);
 
+    // Get files associated with this post
+    const [files] = await pool.execute(`
+      SELECT id, filename, original_name, file_path, file_size, mime_type, 
+             post_id, uploaded_by, download_count, created_at
+      FROM files
+      WHERE post_id = ?
+    `, [post.id]);
+
     // Increment view count for published posts
     if (post.status === 'published') {
       await pool.execute(
@@ -208,7 +216,8 @@ router.get('/:slug', optionalAuth, async (req, res) => {
           username: post.author_name
         },
         categories: categories,
-        tags: tags
+        tags: tags,
+        files: files
       },
       relatedPosts
     });
@@ -222,7 +231,7 @@ router.get('/:slug', optionalAuth, async (req, res) => {
 router.post('/', authenticateToken, requireAdmin, createPostValidation, async (req, res) => {
   try {
     console.log('Create post request body:', req.body);
-    const { title, content, excerpt, featured_image, status, categories, tags } = req.body;
+    const { title, content, excerpt, featured_image, status, categories, tags, file_ids } = req.body;
     console.log('Extracted featured_image:', featured_image);
     const slug = createSlug(title);
 
@@ -280,6 +289,17 @@ router.post('/', authenticateToken, requireAdmin, createPostValidation, async (r
         );
       }
     }
+    
+    // Associate files with the post
+    if (file_ids && file_ids.length > 0) {
+      console.log('Associating files with new post:', file_ids);
+      for (const fileId of file_ids) {
+        await pool.execute(
+          'UPDATE files SET post_id = ? WHERE id = ?',
+          [postId, fileId]
+        );
+      }
+    }
 
     // Get created post
     const [newPosts] = await pool.execute(`
@@ -316,7 +336,7 @@ router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async 
   try {
     console.log('Update post request body:', req.body);
     const { id } = req.params;
-    const { title, content, excerpt, featured_image, status, categories, tags } = req.body;
+    const { title, content, excerpt, featured_image, status, categories, tags, file_ids } = req.body;
     console.log('Extracted featured_image for update:', featured_image);
 
     // Check if post exists
@@ -394,6 +414,18 @@ router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async 
             [id, tagId]
           );
         }
+      }
+    }
+    
+    // Update file associations
+    if (file_ids) {
+      console.log('Updating file associations:', file_ids);
+      // Update file associations in the database
+      for (const fileId of file_ids) {
+        await pool.execute(
+          'UPDATE files SET post_id = ? WHERE id = ?',
+          [id, fileId]
+        );
       }
     }
 

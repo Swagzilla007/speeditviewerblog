@@ -65,7 +65,7 @@ export default function EditPostPage() {
   })
 
   const uploadFileMutation = useMutation({
-    mutationFn: (file: File) => apiClient.uploadFile(file),
+    mutationFn: (file: File) => apiClient.uploadFile(file, parseInt(postId)),
     onSuccess: (data) => {
       setUploadedFiles(prev => [...prev, data.data])
     }
@@ -405,9 +405,11 @@ export default function EditPostPage() {
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{file.original_name}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {file.original_name || file.filename || 'Unnamed file'}
+                          </p>
                           <p className="text-xs text-gray-500">
-                            {(file.file_size / 1024 / 1024).toFixed(2)} MB
+                            {((file.file_size || 0) / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                       </div>
