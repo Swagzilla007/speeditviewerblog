@@ -194,7 +194,17 @@ class ApiClient {
 
   // Files endpoints
   async getFiles(params?: FileQueryParams): Promise<{ files: BlogFile[], pagination: any }> {
-    const response = await this.client.get('/files', { params });
+    // Clean up params - ensure search is properly passed if present
+    const cleanParams = { ...params };
+    if (cleanParams.search === '') {
+      delete cleanParams.search;
+    }
+    
+    console.log('getFiles request params (original):', params);
+    console.log('getFiles request params (cleaned):', cleanParams);
+    
+    const response = await this.client.get('/files', { params: cleanParams });
+    console.log('getFiles response:', response.data);
     return response.data;
   }
 

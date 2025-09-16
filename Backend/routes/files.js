@@ -197,7 +197,12 @@ router.post('/featured-image', authenticateToken, requireAdmin, featuredImageUpl
 // Get all files (admin only)
 router.get('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 20, postId, fileType, is_public, search } = req.query;
+    console.log('Files query parameters:', req.query);
+    // Extract and normalize parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const { postId, fileType } = req.query;
+    const search = req.query.search || '';
     const offset = (page - 1) * limit;
 
     let whereClause = '1=1';
@@ -217,21 +222,22 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
       params.push('featured-%');
     }
     
-    // Filter by public/private status
-    if (is_public !== undefined) {
-      whereClause += ' AND f.is_public = ?';
-      params.push(is_public === 'true');
-    }
+    // All files require approval - removed is_public filter
     
     // Filter by search term
-    if (search) {
-      whereClause += ' AND (f.original_name LIKE ? OR f.description LIKE ? OR p.title LIKE ?)';
+    if (search && search.trim() !== '') {
+      console.log('Searching files with term:', search);
+      whereClause += ' AND (f.original_name LIKE ? OR f.filename LIKE ?)';
       const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm);
+      params.push(searchTerm, searchTerm);
+      
+      console.log(`Search patterns: 
+        - original_name LIKE '${searchTerm}' 
+        - filename LIKE '${searchTerm}'`);
     }
 
     // Get files with uploader info
-    const [files] = await pool.execute(`
+    const query = `
       SELECT 
         f.*, 
         u.username as uploaded_by_name,
@@ -243,12 +249,30 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
       WHERE ${whereClause}
       ORDER BY f.created_at DESC
       LIMIT ? OFFSET ?
-    `, [...params, parseInt(limit), offset]);
+    `;
+    
+    const queryParams = [...params, parseInt(limit), offset];
+    
+    console.log('Executing SQL query:', query);
+    console.log('With parameters:', queryParams);
+    
+    const [files] = await pool.execute(query, queryParams);
+    
+    console.log(`Search results: Found ${files.length} files`);
+    if (search && files.length === 0) {
+      console.log('No files found matching search criteria. Dumping first 10 file names for comparison:');
+      const [allFiles] = await pool.execute(
+        'SELECT id, original_name, filename FROM files LIMIT 10'
+      );
+      console.log(allFiles);
+    }
 
-    // Get total count
+    // Get total count - make sure we use the same FROM clause and JOIN statements as the main query
     const [countResult] = await pool.execute(`
       SELECT COUNT(*) as total
       FROM files f
+      LEFT JOIN users u ON f.uploaded_by = u.id
+      LEFT JOIN posts p ON f.post_id = p.id
       WHERE ${whereClause}
     `, params);
 
@@ -368,7 +392,7 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { postId } = req.body;
+    const { postId, original_name } = req.body;
 
     // Check if file exists
     const [files] = await pool.execute(
@@ -381,10 +405,19 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
 
     // Update file
-    await pool.execute(
-      'UPDATE files SET post_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [postId || null, id]
-    );
+    // Instead of description (which doesn't exist), we update original_name if provided
+    
+    if (original_name) {
+      await pool.execute(
+        'UPDATE files SET post_id = ?, original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [postId || null, original_name, id]
+      );
+    } else {
+      await pool.execute(
+        'UPDATE files SET post_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [postId || null, id]
+      );
+    }
 
     // Get updated file
     const [updatedFiles] = await pool.execute(`

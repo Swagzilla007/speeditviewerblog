@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '@/lib/api'
 import { 
@@ -24,26 +24,31 @@ import {
 export default function FilesPage() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
-  const [publicFilter, setPublicFilter] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [editingFile, setEditingFile] = useState<any>(null)
   const [showForm, setShowForm] = useState(false)
+  // Note: There is no description field in the database
   const [formData, setFormData] = useState({
-    description: '',
-    is_public: true
+    // Keep description field for frontend display only
+    displayName: ''
   })
+
+  // Simple button-based search
+  const handleSearch = () => {
+    setActiveSearch(searchQuery);
+    setCurrentPage(1); // Reset to first page on new search
+  };
 
   // Always filter to show only attached files (not featured images)
   const { data: filesData, isLoading } = useQuery({
     queryKey: ['files', { 
-      search: searchQuery, 
-      is_public: publicFilter, 
+      search: activeSearch,
       page: currentPage,
       fileType: 'attached'  // Always filter for attached files
     }],
     queryFn: () => apiClient.getFiles({
-      search: searchQuery || undefined,
-      is_public: publicFilter === '' ? undefined : publicFilter === 'true',
+      search: activeSearch.trim() || undefined,
       page: currentPage,
       limit: 10,
       // Only show attached files (not featured images)
@@ -58,7 +63,7 @@ export default function FilesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['files'] })
       setEditingFile(null)
-      setFormData({ description: '', is_public: true })
+      setFormData({ displayName: '' })
     }
   })
 
@@ -74,8 +79,7 @@ export default function FilesPage() {
   const handleEdit = (file: any) => {
     setEditingFile(file)
     setFormData({
-      description: file.description || '',
-      is_public: file.is_public
+      displayName: file.original_name || ''
     })
     setShowForm(true)
   }
@@ -84,7 +88,13 @@ export default function FilesPage() {
     e.preventDefault()
     
     if (editingFile) {
-      await updateFileMutation.mutateAsync({ id: editingFile.id, data: formData })
+      // We're updating the original_name instead of description
+      await updateFileMutation.mutateAsync({ 
+        id: editingFile.id, 
+        data: { 
+          original_name: formData.displayName
+        } 
+      })
     }
   }
 
@@ -116,7 +126,7 @@ export default function FilesPage() {
 
   const handleCancel = () => {
     setEditingFile(null)
-    setFormData({ description: '', is_public: true })
+    setFormData({ displayName: '' })
     setShowForm(false)
   }
 
@@ -194,6 +204,7 @@ export default function FilesPage() {
             <div className="mt-2 text-sm text-gray-500">
               <p>This page displays attached files for download by your visitors.</p>
               <p className="mt-1">Files can only be uploaded through posts when creating or editing content.</p>
+              <p className="mt-1">All files require admin approval for user download requests.</p>
             </div>
           </div>
           <div className="flex flex-col space-y-2">
@@ -212,32 +223,55 @@ export default function FilesPage() {
       {/* Filters */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search files..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex">
-              <select
-                value={publicFilter}
-                onChange={(e) => setPublicFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-full"
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search files..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault(); // Prevent form submission
+                      handleSearch();
+                    }
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+              <button 
+                type="button"
+                onClick={handleSearch}
+                className="ml-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
               >
-                <option value="">All Visibility</option>
-                <option value="true">Public Files</option>
-                <option value="false">Private Files</option>
-              </select>
+                Search
+              </button>
+              {activeSearch && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActiveSearch('');
+                    setCurrentPage(1);
+                  }}
+                  className="ml-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Clear
+                </button>
+              )}
             </div>
+            {/* Removed visibility filter as all files are private */}
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-600">
                 {pagination.total || 0} files
+                {activeSearch && (
+                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    Search: {activeSearch}
+                  </span>
+                )}
               </span>
             </div>
           </div>
@@ -329,30 +363,19 @@ export default function FilesPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  Display Name
                 </label>
                 <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  value={formData.displayName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter file description..."
+                  placeholder="Enter a display name for the file..."
                 />
               </div>
               <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_public}
-                    onChange={(e) => setFormData(prev => ({ ...prev, is_public: e.target.checked }))}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Public file</span>
-                </label>
                 <p className="text-xs text-gray-500 mt-1">
-                  {formData.is_public 
-                    ? 'Public files can be downloaded by anyone without approval' 
-                    : 'Private files require approval for each download request'}
+                  You can update the display name of the file. All files require admin approval for download requests from users.
                 </p>
               </div>
               <div className="flex space-x-3">
@@ -409,9 +432,7 @@ export default function FilesPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Downloads
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Visibility
-                    </th>
+                    {/* Removed visibility column */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Uploaded
                     </th>
@@ -436,11 +457,9 @@ export default function FilesPage() {
                                 {file.original_name}
                               </span>
                             </div>
-                            {file.description && (
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
-                                {file.description}
-                              </div>
-                            )}
+                            <div className="text-sm text-gray-500 truncate max-w-xs">
+                              {file.filename}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -469,25 +488,7 @@ export default function FilesPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          file.is_public 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {file.is_public ? (
-                            <>
-                              <Eye className="h-3 w-3 mr-1" />
-                              Public
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="h-3 w-3 mr-1" />
-                              Private
-                            </>
-                          )}
-                        </span>
-                      </td>
+                      {/* Removed visibility column */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(file.created_at).toLocaleDateString()}
                       </td>

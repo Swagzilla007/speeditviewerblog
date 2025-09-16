@@ -58,7 +58,6 @@ export interface BlogFile {
   description?: string;
   post_id?: number;
   download_count: number;
-  is_public: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -135,8 +134,7 @@ export interface TagForm {
 }
 
 export interface FileForm {
-  description?: string;
-  is_public?: boolean;
+  original_name?: string; // Using original_name instead of description
   postId?: number | string;
 }
 
@@ -161,7 +159,6 @@ export interface FileQueryParams {
   limit?: number;
   search?: string;
   post_id?: number;
-  is_public?: boolean;
   fileType?: 'attached' | 'featured' | string;
 }
 
