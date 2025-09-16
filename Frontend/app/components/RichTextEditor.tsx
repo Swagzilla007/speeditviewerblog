@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import Underline from '@tiptap/extension-underline'
+import Image from '@tiptap/extension-image'
 import { 
   Bold, 
   Italic, 
@@ -19,7 +20,8 @@ import {
   Type,
   Heading1,
   Heading2,
-  Heading3
+  Heading3,
+  ImageIcon
 } from 'lucide-react'
 
 interface RichTextEditorProps {
@@ -29,6 +31,8 @@ interface RichTextEditorProps {
 }
 
 const MenuBar = ({ editor }: { editor: any }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   if (!editor) {
     return null
   }
@@ -163,6 +167,83 @@ const MenuBar = ({ editor }: { editor: any }) => {
             <Palette className="h-4 w-4" />
           </button>
         </div>
+        
+        <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+        {/* Image Upload */}
+        <div className="relative">
+          <input
+            id="image-upload"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (event) => {
+              const file = event.target.files?.[0]
+              if (!file) return
+              
+              try {
+                // Create form data for upload
+                const formData = new FormData()
+                formData.append('image', file)
+                
+                // Upload image
+                let baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+                if (!baseURL.endsWith('/api')) {
+                  baseURL = baseURL + '/api'
+                }
+                // Get the token if available (user may be logged in)
+                let headers = {};
+                const token = localStorage.getItem('token');
+                if (token) {
+                  headers = {
+                    'Authorization': `Bearer ${token}`
+                  };
+                }
+                
+                const response = await fetch(`${baseURL}/files/content-images`, {
+                  method: 'POST',
+                  body: formData,
+                  // Not using credentials to avoid CORS issues
+                  headers
+                })
+                
+                if (!response.ok) {
+                  const errorData = await response.text()
+                  console.error('Server error response:', errorData)
+                  throw new Error(`Image upload failed: ${response.status} ${response.statusText}`)
+                }
+                
+                const data = await response.json()
+                const url = data.url
+                
+                // Create a full URL for the image
+                const serverUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+                const serverBase = serverUrl.endsWith('/api') 
+                  ? serverUrl.slice(0, -4) // Remove /api
+                  : serverUrl
+                  
+                // Insert image at current cursor position with full URL
+                const fullImageUrl = url.startsWith('http') ? url : `${serverBase}${url}`
+                editor.chain().focus().setImage({ src: fullImageUrl }).run()
+                
+                // Reset input
+                event.target.value = ''
+              } catch (error) {
+                console.error('Image upload failed:', error)
+                alert('Failed to upload image. Please try again.')
+              }
+            }}
+            ref={fileInputRef}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 rounded hover:bg-gray-200"
+            title="Insert Image"
+          >
+            <ImageIcon className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -178,6 +259,11 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       TextStyle,
       Color,
       Underline,
+      Image.configure({
+        HTMLAttributes: {
+          class: 'rounded-lg max-w-full h-auto',
+        },
+      }),
     ],
     content: value,
     onUpdate: ({ editor }) => {

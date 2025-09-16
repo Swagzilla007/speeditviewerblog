@@ -20,6 +20,12 @@ if (!fs.existsSync(publicStorageDir)) {
   fs.mkdirSync(publicStorageDir, { recursive: true });
 }
 
+// Ensure content images directory exists
+const contentImagesDir = path.join(__dirname, '../public/storage/content-images');
+if (!fs.existsSync(contentImagesDir)) {
+  fs.mkdirSync(contentImagesDir, { recursive: true });
+}
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -43,6 +49,19 @@ const featuredImageStorage = multer.diskStorage({
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, 'featured-' + uniqueSuffix + ext);
+  }
+});
+
+// Configure multer for content image uploads (public storage)
+const contentImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, contentImagesDir);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename for content images
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'content-' + uniqueSuffix + ext);
   }
 });
 
@@ -467,6 +486,48 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
     console.error('Delete file error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Upload content image for post editor
+// This endpoint doesn't require authentication since it's used in the rich text editor
+const uploadContentImage = multer({
+  storage: contentImageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Only allow image files
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+}).single('image');
+
+router.post('/content-images', (req, res) => {
+  uploadContentImage(req, res, function(err) {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      // An unknown error occurred
+      return res.status(500).json({ error: err.message });
+    }
+
+    // No error, file uploaded successfully
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Create URL for the uploaded file
+    const relativePath = '/storage/content-images/' + req.file.filename;
+    
+    res.status(201).json({
+      message: 'Image uploaded successfully',
+      url: relativePath,
+      filename: req.file.filename
+    });
+  });
 });
 
 module.exports = router; 
