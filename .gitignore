@@ -81,7 +81,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+
 
 # Storybook build outputs
 .out
@@ -113,8 +113,7 @@ Thumbs.db
 *.db
 
 # Upload files (optional, remove if you want to keep uploads in git)
-Backend/uploads/
-uploads/
+
 
 # Package manager files
 package-lock.json
