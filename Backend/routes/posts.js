@@ -420,11 +420,32 @@ router.put('/:id', authenticateToken, requireAdmin, updatePostValidation, async 
     // Update file associations
     if (file_ids) {
       console.log('Updating file associations:', file_ids);
-      // Update file associations in the database
-      for (const fileId of file_ids) {
+      
+      // If we have file_ids, update associations
+      if (file_ids.length > 0) {
+        try {
+          // First, clear all file associations for this post
+          await pool.execute(
+            'UPDATE files SET post_id = NULL WHERE post_id = ?',
+            [id]
+          );
+          
+          // Then update the associations for the files we want to keep
+          for (const fileId of file_ids) {
+            await pool.execute(
+              'UPDATE files SET post_id = ? WHERE id = ?',
+              [id, fileId]
+            );
+          }
+        } catch (error) {
+          console.error('Error updating file associations:', error);
+          throw error;
+        }
+      } else {
+        // If file_ids is empty, remove all associations for this post
         await pool.execute(
-          'UPDATE files SET post_id = ? WHERE id = ?',
-          [id, fileId]
+          'UPDATE files SET post_id = NULL WHERE post_id = ?',
+          [id]
         );
       }
     }
