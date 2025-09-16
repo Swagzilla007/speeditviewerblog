@@ -1,12 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'blog.cinekal.com'],
     remotePatterns: [
       {
         protocol: 'http',
         hostname: 'localhost',
         port: '5000',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'blog.cinekal.com',
         pathname: '/uploads/**',
       },
     ],
@@ -17,6 +22,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  // Explicitly set output directory
+  distDir: '.next',
 }
 
 module.exports = nextConfig 
