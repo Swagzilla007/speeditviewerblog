@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import apiClient from '@/lib/api'
+import { storage } from '@/lib/storage'
 import { User, Lock, Mail, ArrowRight, UserPlus } from 'lucide-react'
 
 export default function RegisterPage() {
@@ -24,7 +25,7 @@ export default function RegisterPage() {
     onSuccess: (data) => {
       // Store auth token and user data
       apiClient.setAuthToken(data.data.token)
-      localStorage.setItem('user', JSON.stringify(data.data.user))
+      storage.setItem('user', JSON.stringify(data.data.user))
       
       // Redirect to home
       router.push('/')

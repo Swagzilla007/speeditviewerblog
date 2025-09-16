@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react'
 import toast from 'react-hot-toast'
 import apiClient from '@/lib/api'
+import { storage } from '@/lib/storage'
 import { LoginForm } from '@/types'
 
 export default function AdminLoginPage() {
@@ -28,7 +29,7 @@ export default function AdminLoginPage() {
       console.log('Login success response:', response)
       if (response.success) {
         apiClient.setAuthToken(response.data.token)
-        localStorage.setItem('user', JSON.stringify(response.data.user))
+        storage.setItem('user', JSON.stringify(response.data.user))
         toast.success('Login successful!')
         router.push('/admin')
       } else {

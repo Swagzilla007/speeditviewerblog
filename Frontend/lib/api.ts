@@ -19,6 +19,7 @@ import {
   FileQueryParams,
   DownloadRequestQueryParams,
 } from '@/types';
+import { storage } from './storage';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -35,7 +36,7 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('auth_token');
+        const token = storage.getItem('auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -55,8 +56,8 @@ class ApiClient {
           const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/admin/login';
           const isLoginAttempt = error.config?.url?.includes('/auth/login');
           
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
+          storage.removeItem('auth_token');
+          storage.removeItem('user');
           
           // Only redirect if not on login page and not a login attempt
           if (typeof window !== 'undefined' && !isLoginPage && !isLoginAttempt) {
@@ -350,16 +351,16 @@ class ApiClient {
 
   // Utility methods
   setAuthToken(token: string) {
-    localStorage.setItem('auth_token', token);
+    storage.setItem('auth_token', token);
   }
 
   getAuthToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return storage.getItem('auth_token');
   }
 
   removeAuthToken() {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    storage.removeItem('auth_token');
+    storage.removeItem('user');
   }
 
   isAuthenticated(): boolean {

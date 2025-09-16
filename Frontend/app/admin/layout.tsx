@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import apiClient from '@/lib/api'
 import { User } from '@/types'
+import { storage } from '@/lib/storage'
 import { 
   LogOut, 
   Menu, 
@@ -41,7 +42,7 @@ export default function AdminLayout({
 
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('auth_token')
+        const token = storage.getItem('auth_token')
         if (!token) {
           router.push('/admin/login')
           return

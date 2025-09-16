@@ -193,7 +193,8 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 }
                 // Get the token if available (user may be logged in)
                 let headers = {};
-                const token = localStorage.getItem('token');
+                // Use safe storage for token access
+                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
                 if (token) {
                   headers = {
                     'Authorization': `Bearer ${token}`
