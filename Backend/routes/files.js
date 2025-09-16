@@ -142,13 +142,14 @@ router.post('/upload', authenticateToken, requireAdmin, upload.single('file'), f
     const file = req.file;
 
     // Create file record in database
+    // Store only the filename rather than the full path
     const [result] = await pool.execute(`
       INSERT INTO files (filename, original_name, file_path, file_size, mime_type, post_id, uploaded_by)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
       file.filename,
       file.originalname,
-      file.path,
+      file.filename, // Just store the filename instead of the full path
       file.size,
       file.mimetype,
       postId || null,
@@ -345,6 +346,7 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/download', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    console.log(`Download request for file ID: ${id} by user: ${req.user.id} (${req.user.role})`);
 
     // Get file info
     const [files] = await pool.execute(`
@@ -355,24 +357,49 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
     `, [id]);
 
     if (files.length === 0) {
+      console.log(`File ID ${id} not found in database`);
       return res.status(404).json({ error: 'File not found' });
     }
 
     const file = files[0];
+    console.log(`Found file: ${file.original_name}, path: ${file.file_path}`);
 
-    // Check if file exists on disk
-    if (!fs.existsSync(file.file_path)) {
+    // Check if file exists on disk - Handle both absolute and relative paths
+    let filePath = file.file_path;
+    let fileFound = false;
+    
+    // Try the stored path first
+    if (fs.existsSync(filePath)) {
+      fileFound = true;
+      console.log(`File found at stored path: ${filePath}`);
+    } else {
+      // Try with the filename in the uploads directory
+      const filename = path.basename(filePath);
+      const alternativePath = path.join(__dirname, '../uploads', filename);
+      
+      if (fs.existsSync(alternativePath)) {
+        filePath = alternativePath;
+        fileFound = true;
+        console.log(`File found at alternative path: ${filePath}`);
+      }
+    }
+    
+    if (!fileFound) {
+      console.log(`File not found on disk. Tried: ${filePath}`);
       return res.status(404).json({ error: 'File not found on server' });
     }
 
     // Admins always have access
     if (req.user.role === 'admin') {
+      console.log(`Admin user ${req.user.id} granted direct access to file ${id}`);
       // Set headers for download
       res.setHeader('Content-Type', file.mime_type);
       res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
       res.setHeader('Content-Length', file.file_size);
-      return fs.createReadStream(file.file_path).pipe(res);
+      return fs.createReadStream(filePath).pipe(res);
     }
+    
+    console.log(`Checking download permissions for user ${req.user.id} on file ${id}`);
     
     // Check if user has an approved download request for this file
     const [approvedRequests] = await pool.execute(`
@@ -380,7 +407,25 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
       WHERE user_id = ? AND file_id = ? AND status = 'approved'
     `, [req.user.id, id]);
     
+    console.log(`Found ${approvedRequests.length} approved download requests`);
+    
     if (approvedRequests.length === 0) {
+      // Check if user already has a pending request
+      const [pendingRequests] = await pool.execute(`
+        SELECT id FROM download_requests 
+        WHERE user_id = ? AND file_id = ? AND status = 'pending'
+      `, [req.user.id, id]);
+      
+      if (pendingRequests.length > 0) {
+        console.log(`User ${req.user.id} has a pending request for file ${id}`);
+        return res.status(403).json({
+          error: 'Your download request is pending approval.',
+          needsRequest: false,
+          hasPendingRequest: true
+        });
+      }
+      
+      console.log(`No approved requests found, redirecting to request page`);
       return res.status(403).json({ 
         error: 'Access denied. You need an approved download request for this file.',
         needsRequest: true 
@@ -399,7 +444,7 @@ router.get('/:id/download', authenticateToken, async (req, res) => {
     res.setHeader('Content-Length', file.file_size);
 
     // Stream file to response
-    const fileStream = fs.createReadStream(file.file_path);
+    const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
   } catch (error) {
     console.error('Download file error:', error);
@@ -473,9 +518,21 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 
     const file = files[0];
 
-    // Delete file from disk
-    if (fs.existsSync(file.file_path)) {
-      fs.unlinkSync(file.file_path);
+    // Delete file from disk - Handle both absolute and relative paths
+    let filePath = file.file_path;
+    
+    // Try alternative paths if the file doesn't exist at the stored path
+    if (!fs.existsSync(filePath)) {
+      // Try with the filename in the uploads directory
+      const filename = path.basename(filePath);
+      const alternativePath = path.join(__dirname, '../uploads', filename);
+      
+      if (fs.existsSync(alternativePath)) {
+        filePath = alternativePath;
+        fs.unlinkSync(filePath);
+      }
+    } else {
+      fs.unlinkSync(filePath);
     }
 
     // Delete file record from database
