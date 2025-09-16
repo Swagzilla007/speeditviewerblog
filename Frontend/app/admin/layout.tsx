@@ -50,14 +50,14 @@ export default function AdminLayout({
 
         const response = await apiClient.getProfile()
         if (response.data.role !== 'admin') {
-          localStorage.removeItem('auth_token')
+          storage.removeItem('auth_token')
           router.push('/admin/login')
           return
         }
 
         setUser(response.data)
       } catch (error) {
-        localStorage.removeItem('auth_token')
+        storage.removeItem('auth_token')
         router.push('/admin/login')
       } finally {
         setLoading(false)

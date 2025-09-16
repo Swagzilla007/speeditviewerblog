@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { BlogFile, User } from '@/types'
 import apiClient from '@/lib/api'
+import { storage } from '@/lib/storage'
 import { Download, Lock, Clock } from 'lucide-react'
 
 interface FileDownloadButtonProps {
@@ -28,7 +29,7 @@ export default function FileDownloadButton({ file, user, postId }: FileDownloadB
       // Try to download the file directly first
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/${file.id}/download`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${storage.getItem('auth_token')}`
         }
       })
 

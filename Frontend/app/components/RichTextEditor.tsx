@@ -8,6 +8,7 @@ import TextStyle from '@tiptap/extension-text-style'
 import Color from '@tiptap/extension-color'
 import Underline from '@tiptap/extension-underline'
 import Image from '@tiptap/extension-image'
+import { storage } from '@/lib/storage'
 import { 
   Bold, 
   Italic, 
@@ -194,7 +195,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 // Get the token if available (user may be logged in)
                 let headers = {};
                 // Use safe storage for token access
-                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                const token = storage.getItem('auth_token');
                 if (token) {
                   headers = {
                     'Authorization': `Bearer ${token}`

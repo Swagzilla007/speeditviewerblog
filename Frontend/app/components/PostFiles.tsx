@@ -5,6 +5,7 @@ import { BlogFile, User } from '@/types'
 import { useRouter } from 'next/navigation'
 import { FileText, Download, Lock } from 'lucide-react'
 import apiClient from '@/lib/api'
+import { storage } from '@/lib/storage'
 
 interface PostFilesProps {
   files: BlogFile[]
@@ -37,8 +38,8 @@ export default function PostFiles({ files, postId }: PostFilesProps) {
     })
     setFileStates(initialFileStates)
     
-    // Get user from localStorage
-    const storedUser = localStorage.getItem('user')
+    // Get user from storage
+    const storedUser = storage.getItem('user')
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser)
@@ -102,7 +103,7 @@ export default function PostFiles({ files, postId }: PostFilesProps) {
       // Try to download the file directly first
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/files/${file.id}/download`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${storage.getItem('auth_token')}`
         }
       })
 

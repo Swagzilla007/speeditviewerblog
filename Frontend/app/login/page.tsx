@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -8,7 +8,8 @@ import apiClient from '@/lib/api'
 import { storage } from '@/lib/storage'
 import { User, Lock, ArrowRight } from 'lucide-react'
 
-export default function LoginPage() {
+// Component to handle the search params
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get('returnUrl') || '/'
@@ -154,5 +155,16 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Main component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600"></div>
+    </div>}>
+      <LoginForm />
+    </Suspense>
   )
 }

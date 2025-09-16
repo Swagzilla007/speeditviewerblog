@@ -5,6 +5,7 @@ import { Menu, X, User, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import apiClient from '@/lib/api'
+import { storage } from '@/lib/storage'
 
 interface NavigationProps {
   currentPage?: 'home' | 'posts' | 'about' | 'contact'
@@ -18,7 +19,7 @@ export default function Navigation({ currentPage = 'home' }: NavigationProps) {
 
   useEffect(() => {
     setIsClient(true)
-    const storedUser = localStorage.getItem('user')
+    const storedUser = storage.getItem('user')
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser))

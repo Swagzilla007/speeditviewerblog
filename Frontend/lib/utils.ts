@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format, formatDistanceToNow } from 'date-fns';
+import { storage } from './storage';
 
 // Utility function to merge Tailwind classes
 export function cn(...inputs: ClassValue[]) {
@@ -244,7 +245,7 @@ export function parseQueryString(queryString: string): Record<string, string> {
 // Local storage utilities
 export function setLocalStorage<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    storage.setItem(key, JSON.stringify(value));
   } catch (error) {
     console.error('Failed to set localStorage:', error);
   }
@@ -252,7 +253,7 @@ export function setLocalStorage<T>(key: string, value: T): void {
 
 export function getLocalStorage<T>(key: string, defaultValue?: T): T | null {
   try {
-    const item = localStorage.getItem(key);
+    const item = storage.getItem(key);
     return item ? JSON.parse(item) : defaultValue || null;
   } catch (error) {
     console.error('Failed to get localStorage:', error);
@@ -262,7 +263,7 @@ export function getLocalStorage<T>(key: string, defaultValue?: T): T | null {
 
 export function removeLocalStorage(key: string): void {
   try {
-    localStorage.removeItem(key);
+    storage.removeItem(key);
   } catch (error) {
     console.error('Failed to remove localStorage:', error);
   }
